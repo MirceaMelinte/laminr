@@ -1,0 +1,24 @@
+{
+  "FixedFileInfo": {
+    "FileVersion": {
+      "Major": 0,
+      "Minor": 0,
+      "Patch": 1,
+      "Build": 0
+    },
+    "ProductVersion": {
+      "Major": 0,
+      "Minor": 0,
+      "Patch": 1,
+      "Build": 0
+    }
+  },
+  "StringFileInfo": {
+    "CompanyName": "laminr",
+    "FileDescription": "laminr Manager - Your simulator. Your way.",
+    "ProductName": "laminr Manager",
+    "FileVersion": "0.0.1.0",
+    "ProductVersion": "0.0.1.0"
+  },
+  "IconPath": "app.ico"
+}

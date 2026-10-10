@@ -1,0 +1,248 @@
+[
+  {
+    "Component": "NVAPI",
+    "Source": "optiscaler/external/nvapi/License.txt",
+    "Notice": "LICENSES/ThirdParty/NVAPI.txt",
+    "SHA256": "4276d61aeab3d8912ba64123209147c4a0c4fb5d191cc5df1072b1799a06f8e9"
+  },
+  {
+    "Component": "ImGui-runtime",
+    "Source": "optiscaler/OptiScaler/include/imgui/LICENSE.txt",
+    "Notice": "LICENSES/ThirdParty/ImGui-runtime.txt",
+    "SHA256": "55e058cc5899e6077a819ad1005d6d1f4528f65ae100795c9692f9fa6525a8ce"
+  },
+  {
+    "Component": "ImGui-effects",
+    "Source": "reshade/deps/imgui/LICENSE.txt",
+    "Notice": "LICENSES/ThirdParty/ImGui-effects.txt",
+    "SHA256": "55e058cc5899e6077a819ad1005d6d1f4528f65ae100795c9692f9fa6525a8ce"
+  },
+  {
+    "Component": "MinHook-effects",
+    "Source": "reshade/deps/minhook/LICENSE.txt",
+    "Notice": "LICENSES/ThirdParty/MinHook-effects.txt",
+    "SHA256": "4f21f857550d7be854da6ea5f2da4e6775ca4e3fbb535e4f3d961c47d0bf3335"
+  },
+  {
+    "Component": "OpenVR",
+    "Source": "reshade/deps/openvr/LICENSE",
+    "Notice": "LICENSES/ThirdParty/OpenVR.txt",
+    "SHA256": "9e6d1480fb68e86ceafed312f7e67dadcdc2a99b350b710d624b8f0f0f1a2329"
+  },
+  {
+    "Component": "VMA",
+    "Source": "reshade/deps/vma/LICENSE.txt",
+    "Notice": "LICENSES/ThirdParty/VMA.txt",
+    "SHA256": "e5fc8b0b0357a75d63649c8f2552576aaa6941c361a013710bb53afc64d3a8aa"
+  },
+  {
+    "Component": "UTFCPP",
+    "Source": "reshade/deps/utfcpp/LICENSE",
+    "Notice": "LICENSES/ThirdParty/UTFCPP.txt",
+    "SHA256": "beb8e42e9d6b4284e03304d05a81a0755200a965fc8d0a5e0aea1e84cf805d6e"
+  },
+  {
+    "Component": "SPIRV",
+    "Source": "reshade/deps/spirv/LICENSE",
+    "Notice": "LICENSES/ThirdParty/SPIRV.txt",
+    "SHA256": "dbb7f012478c842e49e14bc4060d1b25463ce34a9d4602e029493c8b6e97bbfb"
+  },
+  {
+    "Component": "GLAD",
+    "Source": "reshade/deps/glad/LICENSE",
+    "Notice": "LICENSES/ThirdParty/GLAD.txt",
+    "SHA256": "ec2b8bbf86d22622b9bbadf36a6cb7032c0f5b8c4a1766d4db05bf41b4dc451d"
+  },
+  {
+    "Component": "STB",
+    "Source": "reshade/deps/stb/LICENSE",
+    "Notice": "LICENSES/ThirdParty/STB.txt",
+    "SHA256": "11dd149dbc50748419a22fcec275b5bcfb4c2d86d9fba8802e5c4ffd40c94609"
+  },
+  {
+    "Component": "JXL-simple",
+    "Source": "reshade/deps/jxl_simple_lossless/LICENSE",
+    "Notice": "LICENSES/ThirdParty/JXL-simple.txt",
+    "SHA256": "2c783d8d5d952bd0726292e56ad1f3f247f370667809497a8020b8c2915ba470"
+  },
+  {
+    "Component": "Magic-enum",
+    "Source": "optiscaler/external/magic_enum/LICENSE",
+    "Notice": "LICENSES/ThirdParty/Magic-enum.txt",
+    "SHA256": "807abee0c36b11f5d64c5c2652129b84b41cc9f8f9b8d324e0e53290b2542956"
+  },
+  {
+    "Component": "Spdlog",
+    "Source": "optiscaler/external/spdlog/LICENSE",
+    "Notice": "LICENSES/ThirdParty/Spdlog.txt",
+    "SHA256": "4ccecab18d1ff0b61174fe3d6c430541625d3ddb865b0d5887db296f883c76e7"
+  },
+  {
+    "Component": "Unordered-dense",
+    "Source": "optiscaler/external/unordered_dense/LICENSE",
+    "Notice": "LICENSES/ThirdParty/Unordered-dense.txt",
+    "SHA256": "55284952bd483a64a38f48069796b813da1085f1360d8d59cfbef6cce802868e"
+  },
+  {
+    "Component": "FreeType",
+    "Notice": "LICENSES/ThirdParty/FreeType.txt",
+    "SHA256": "08c135755dd589039470f1fdbb400daaabaaa50d0b366d19cebff4d22986baa1",
+    "Provenance": "Official pinned version licence; see corresponding source/header revision"
+  },
+  {
+    "Component": "Detours",
+    "Notice": "LICENSES/ThirdParty/Detours.txt",
+    "SHA256": "b301808b732cfaa60df2b4b422d78cd97d2a15058b207e7e33f0535ba5170dd6",
+    "Provenance": "Official pinned version licence; see corresponding source/header revision"
+  },
+  {
+    "Component": "Nlohmann",
+    "Notice": "LICENSES/ThirdParty/Nlohmann.txt",
+    "SHA256": "46a65cffd1ea955132d95a8dd921640714a8d6b537d2e4e482d31145ae95b603",
+    "Provenance": "Official pinned version licence; see corresponding source/header revision"
+  },
+  {
+    "Component": "Hack",
+    "Notice": "LICENSES/ThirdParty/Hack.txt",
+    "SHA256": "1f61bb7c790c59b4b0ecdf304628b94e42ae4c8020094a8c3da73381ab212623",
+    "Provenance": "LICENSE.md of Hack v3.003 (source-foundry/Hack); the menu font is embedded in optiscaler/OptiScaler/menu/font/Hack_Compressed.h"
+  },
+  {
+    "Component": "Streamline",
+    "Source": "optiscaler/external/streamline/sl.h",
+    "Notice": "LICENSES/ThirdParty/Streamline.txt",
+    "SHA256": "561b8e8c25d10c0cd27cf396f8bd36a29a2a7ea6e88044a1d2d7443d872d8e51"
+  },
+  {
+    "Component": "Streamline1",
+    "Source": "optiscaler/external/streamline1/sl1.h",
+    "Notice": "LICENSES/ThirdParty/Streamline1.txt",
+    "SHA256": "24f4b4eff3643cd5badf3047f478741655210e00ccd7854613a578881657c6b6"
+  },
+  {
+    "Component": "magic_enum",
+    "Source": "optiscaler/external/magic_enum/LICENSE",
+    "Notice": "LICENSES/ThirdParty/Additional/optiscaler/external/magic_enum/LICENSE",
+    "SHA256": "807abee0c36b11f5d64c5c2652129b84b41cc9f8f9b8d324e0e53290b2542956"
+  },
+  {
+    "Component": "nvapi",
+    "Source": "optiscaler/external/nvapi/License.txt",
+    "Notice": "LICENSES/ThirdParty/Additional/optiscaler/external/nvapi/License.txt",
+    "SHA256": "4276d61aeab3d8912ba64123209147c4a0c4fb5d191cc5df1072b1799a06f8e9"
+  },
+  {
+    "Component": "simpleini",
+    "Source": "optiscaler/external/simpleini/LICENCE.txt",
+    "Notice": "LICENSES/ThirdParty/Additional/optiscaler/external/simpleini/LICENCE.txt",
+    "SHA256": "cf85640c89c76dfa913f83c7c8f02682f307833c5955763bca9ca6e27051f213"
+  },
+  {
+    "Component": "spdlog",
+    "Source": "optiscaler/external/spdlog/LICENSE",
+    "Notice": "LICENSES/ThirdParty/Additional/optiscaler/external/spdlog/LICENSE",
+    "SHA256": "4ccecab18d1ff0b61174fe3d6c430541625d3ddb865b0d5887db296f883c76e7"
+  },
+  {
+    "Component": "unordered_dense",
+    "Source": "optiscaler/external/unordered_dense/LICENSE",
+    "Notice": "LICENSES/ThirdParty/Additional/optiscaler/external/unordered_dense/LICENSE",
+    "SHA256": "55284952bd483a64a38f48069796b813da1085f1360d8d59cfbef6cce802868e"
+  },
+  {
+    "Component": "d3d12",
+    "Source": "reshade/deps/d3d12/LICENSE",
+    "Notice": "LICENSES/ThirdParty/Additional/reshade/deps/d3d12/LICENSE",
+    "SHA256": "903df5512f7d02609fed0c780a9b704f5a3eeb6e4d84ebe42a29845c81899a3c"
+  },
+  {
+    "Component": "d3d12on7",
+    "Source": "reshade/deps/d3d12on7/LICENSE.txt",
+    "Notice": "LICENSES/ThirdParty/Additional/reshade/deps/d3d12on7/LICENSE.txt",
+    "SHA256": "1c29e1d87dac757a11cdf169107b95db11c4503436a4ea8bdb33e874a934f8cf"
+  },
+  {
+    "Component": "d3d911on12",
+    "Source": "reshade/deps/d3d911on12/LICENSE.txt",
+    "Notice": "LICENSES/ThirdParty/Additional/reshade/deps/d3d911on12/LICENSE.txt",
+    "SHA256": "903df5512f7d02609fed0c780a9b704f5a3eeb6e4d84ebe42a29845c81899a3c"
+  },
+  {
+    "Component": "glad",
+    "Source": "reshade/deps/glad/LICENSE",
+    "Notice": "LICENSES/ThirdParty/Additional/reshade/deps/glad/LICENSE",
+    "SHA256": "ec2b8bbf86d22622b9bbadf36a6cb7032c0f5b8c4a1766d4db05bf41b4dc451d"
+  },
+  {
+    "Component": "imgui",
+    "Source": "reshade/deps/imgui/LICENSE.txt",
+    "Notice": "LICENSES/ThirdParty/Additional/reshade/deps/imgui/LICENSE.txt",
+    "SHA256": "55e058cc5899e6077a819ad1005d6d1f4528f65ae100795c9692f9fa6525a8ce"
+  },
+  {
+    "Component": "jxl_simple_lossless",
+    "Source": "reshade/deps/jxl_simple_lossless/LICENSE",
+    "Notice": "LICENSES/ThirdParty/Additional/reshade/deps/jxl_simple_lossless/LICENSE",
+    "SHA256": "2c783d8d5d952bd0726292e56ad1f3f247f370667809497a8020b8c2915ba470"
+  },
+  {
+    "Component": "minhook",
+    "Source": "reshade/deps/minhook/LICENSE.txt",
+    "Notice": "LICENSES/ThirdParty/Additional/reshade/deps/minhook/LICENSE.txt",
+    "SHA256": "4f21f857550d7be854da6ea5f2da4e6775ca4e3fbb535e4f3d961c47d0bf3335"
+  },
+  {
+    "Component": "openvr",
+    "Source": "reshade/deps/openvr/LICENSE",
+    "Notice": "LICENSES/ThirdParty/Additional/reshade/deps/openvr/LICENSE",
+    "SHA256": "9e6d1480fb68e86ceafed312f7e67dadcdc2a99b350b710d624b8f0f0f1a2329"
+  },
+  {
+    "Component": "openxr",
+    "Source": "reshade/deps/openxr/LICENSE",
+    "Notice": "LICENSES/ThirdParty/Additional/reshade/deps/openxr/LICENSE",
+    "SHA256": "3ddf9be5c28fe27dad143a5dc76eea25222ad1dd68934a047064e56ed2fa40c5"
+  },
+  {
+    "Component": "spirv",
+    "Source": "reshade/deps/spirv/LICENSE",
+    "Notice": "LICENSES/ThirdParty/Additional/reshade/deps/spirv/LICENSE",
+    "SHA256": "dbb7f012478c842e49e14bc4060d1b25463ce34a9d4602e029493c8b6e97bbfb"
+  },
+  {
+    "Component": "stb",
+    "Source": "reshade/deps/stb/LICENSE",
+    "Notice": "LICENSES/ThirdParty/Additional/reshade/deps/stb/LICENSE",
+    "SHA256": "11dd149dbc50748419a22fcec275b5bcfb4c2d86d9fba8802e5c4ffd40c94609"
+  },
+  {
+    "Component": "utfcpp",
+    "Source": "reshade/deps/utfcpp/LICENSE",
+    "Notice": "LICENSES/ThirdParty/Additional/reshade/deps/utfcpp/LICENSE",
+    "SHA256": "beb8e42e9d6b4284e03304d05a81a0755200a965fc8d0a5e0aea1e84cf805d6e"
+  },
+  {
+    "Component": "vma",
+    "Source": "reshade/deps/vma/LICENSE.txt",
+    "Notice": "LICENSES/ThirdParty/Additional/reshade/deps/vma/LICENSE.txt",
+    "SHA256": "e5fc8b0b0357a75d63649c8f2552576aaa6941c361a013710bb53afc64d3a8aa"
+  },
+  {
+    "Component": "jnipp",
+    "Source": "reshade/deps/openxr/src/external/jnipp/LICENSE",
+    "Notice": "LICENSES/ThirdParty/Additional/reshade/deps/openxr/src/external/jnipp/LICENSE",
+    "SHA256": "4057416bf9f4a9dc2cc3fef280d20337856d5363fcc6a6fa6f79c0ea760bf549"
+  },
+  {
+    "Component": "jsoncpp",
+    "Source": "reshade/deps/openxr/src/external/jsoncpp/LICENSE",
+    "Notice": "LICENSES/ThirdParty/Additional/reshade/deps/openxr/src/external/jsoncpp/LICENSE",
+    "SHA256": "ecf1a272af5d660ed0054701b5662e6a9f208b56502dc67983fce60a657d58b2"
+  },
+  {
+    "Component": "FidelityFX-FSR1",
+    "Source": "optiscaler/OptiScaler/shaders/output_scaling/fsr1/ffx_a.h",
+    "Notice": "LICENSES/ThirdParty/FidelityFX-FSR1.txt",
+    "SHA256": "9dbe645cd9b0e0a5b9861d5cd070576175ca0228b14c66be76952fb9739236e9"
+  }
+]

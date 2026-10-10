@@ -1,0 +1,439 @@
+﻿. "$PSScriptRoot/json-state.ps1"
+$ErrorActionPreference='Stop'
+function GetBundledLaminrVersion { 'P0.0.1' }
+function TestBundledUpdateVersion($Manifest){
+ try{
+  $installed=[regex]::Match([string]$Manifest.Version,'\d+\.\d+(?:\.\d+){0,2}').Value
+  $bundled=[regex]::Match((GetBundledLaminrVersion),'\d+\.\d+(?:\.\d+){0,2}').Value
+  if(-not $installed -or -not $bundled){return $false}
+  return ([version]$bundled -gt [version]$installed)
+ }catch{return $false}
+}
+function AssertRepairVersion($Manifest){
+    $bundled=GetBundledLaminrVersion
+    if(-not $Manifest.Version -or $Manifest.Version -cne $bundled){
+        $next=if(TestBundledUpdateVersion $Manifest){'Choose Update laminr in Setup to review and apply this newer build while keeping presets, settings and original backups.'}else{'Use the manager matching the installed version.'}
+        throw "Repair requires the installer matching the installed version ($($Manifest.Version)). This installer contains $bundled. Repair will not update or downgrade laminr. $next"
+    }
+}
+function FullPath([string]$Path){[IO.Path]::GetFullPath($Path).TrimEnd('\','/')}
+function HashFile([string]$Path){if(Test-Path -LiteralPath $Path -PathType Leaf){(Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash}else{''}}
+function GetDefenderFileEvidence([string]$Path){
+    # Read only a bounded recent event window, and return evidence for this exact
+    # file. Detection/action events are not proof that quarantine succeeded.
+    try{
+        $wanted=FullPath $Path
+        $events=@(Get-WinEvent -FilterHashtable @{LogName='Microsoft-Windows-Windows Defender/Operational';Id=1116,1117;StartTime=(Get-Date).AddDays(-2)} -MaxEvents 128 -ErrorAction Stop)
+        foreach($event in $events){
+            [xml]$xml=$event.ToXml();$fields=@{}
+            foreach($data in $xml.Event.EventData.Data){$fields[[string]$data.Name]=[string]$data.'#text'}
+            $matched=$false
+            foreach($resource in ([string]$fields['Path'] -split ';')){
+                $candidate=$resource.Trim() -replace '^(?i:file:|containerfile:)',''
+                if($candidate -notmatch '^(?:[A-Za-z]:[\\/]|\\\\)'){continue}
+                if([string]::Equals((FullPath $candidate),$wanted,[StringComparison]::OrdinalIgnoreCase)){$matched=$true;break}
+            }
+            if(-not $matched){continue}
+            $threat=([string]$fields['Threat Name'] -replace '[\r\n\x00-\x1f]',' ').Trim()
+            # A detection label should not contain a filesystem path. Avoid
+            # echoing unrelated private paths from an unusual/malformed record.
+            if($threat -match '[A-Za-z]:[\\/]|\\\\'){$threat='unnamed detection'}
+            if(-not $threat){$threat='unnamed detection'}
+            if($threat.Length -gt 160){$threat=$threat.Substring(0,160)}
+            return " Windows Defender recorded $threat for this exact file within the last 48 hours. Open Windows Security > Protection history to check the action taken."
+        }
+    }catch{ }
+    return ' Check antivirus protection history for this file; no matching recent Defender event was available to confirm the cause.'
+}
+function OwnedPath([string]$Root,[string]$Relative){
+    $base=FullPath $Root;$path=FullPath (Join-Path $base $Relative)
+    if(-not $path.StartsWith($base+'\',[StringComparison]::OrdinalIgnoreCase)){throw 'Path is outside the installation folder.'}
+    $check=$path
+    while($check){if(Test-Path -LiteralPath $check){if((Get-Item -LiteralPath $check -Force).Attributes -band [IO.FileAttributes]::ReparsePoint){throw "Linked folders are not supported: $check"}};$parent=Split-Path $check -Parent;if($parent -eq $check){break};$check=$parent}
+    $path
+}
+function AssertClosed([string]$Game){
+    foreach($p in Get-Process){try{if($p.Path -and ((FullPath (Split-Path $p.Path -Parent)) -eq (FullPath $Game))){throw "Close $($p.ProcessName) first."}}catch [System.ComponentModel.Win32Exception]{}}
+    if(Get-Process FlightSimulator2024,FlightSimulator -ErrorAction SilentlyContinue){throw 'Close MSFS before changing installed files.'}
+}
+function ManifestPath([string]$StateRoot,[string]$Game){
+    $bytes=[Text.Encoding]::UTF8.GetBytes((FullPath $Game).ToLowerInvariant());$sha=[Security.Cryptography.SHA256]::Create();$id=[BitConverter]::ToString($sha.ComputeHash($bytes)).Replace('-','').Substring(0,16);$sha.Dispose()
+    OwnedPath $StateRoot ('Games/'+$id+'/manifest.json')
+}
+function ReadLaminrState([string]$Path){
+ $bytes=0
+ for($attempt=0;$attempt -lt 3;$attempt++){
+  try{
+   $item=Get-Item -LiteralPath $Path -Force -ErrorAction Stop;$bytes=$item.Length
+   if($item.PSIsContainer -or $bytes -gt 4MB -or ($item.Attributes -band [IO.FileAttributes]::ReparsePoint)){throw 'Invalid receipt size or linked file'}
+   $text=[IO.File]::ReadAllText($item.FullName,[Text.Encoding]::UTF8)
+   $value=$text|ConvertFrom-Json -ErrorAction Stop
+   if($null -eq $value -or $value -is [array] -or $value -isnot [pscustomobject] -or -not $value.Game -or -not $value.Status -or -not [IO.Path]::IsPathRooted([string]$value.Game)){throw 'Invalid ownership receipt schema'}
+   return $value
+  }catch{if($attempt -lt 2){Start-Sleep -Milliseconds 30}}
+ }
+ $digest=try{(Get-FileHash -LiteralPath $Path -Algorithm SHA256 -ErrorAction Stop).Hash}catch{'unavailable'}
+ throw "Installation receipt could not be read or validated ($([IO.Path]::GetFileName($Path)), $bytes bytes, SHA256 $digest). No receipt or original backup was reset. Repair this recorded installation before retrying."
+}
+function WriteState($Manifest,[string]$Path){
+ $tmp=$Path+'.'+[guid]::NewGuid().ToString('N')+'.tmp'
+ try{
+  $json=$Manifest|ConvertTo-Json -Depth 12
+  [IO.File]::WriteAllText($tmp,$json,[Text.UTF8Encoding]::new($true))
+  if(Test-Path -LiteralPath $Path){[IO.File]::Replace($tmp,$Path,[System.Management.Automation.Language.NullString]::Value)}else{[IO.File]::Move($tmp,$Path)}
+ }finally{if(Test-Path -LiteralPath $tmp){Remove-Item -LiteralPath $tmp -Force}}
+}
+function IsGraphicsMod([string]$Relative,[string]$File){
+ if($Relative -match '^(?i:laminrData)[\\/]' -or $Relative -match '^(?i:ReShade(?:64\.dll|\.ini|\.log)|OptiScaler(?:\.dll|\.ini|\.log)|laminr\.ini|nvngx_dlssnr\.dll|nvngx\.dll_dlssnr\.dll)$' -or $Relative -match '(?i)(dlss5|renodx).*\.addon64$'){return $true}
+ if(Test-Path -LiteralPath $File -PathType Leaf){try{$v=[Diagnostics.FileVersionInfo]::GetVersionInfo($File);return "$($v.ProductName) $($v.FileDescription)" -match '(?i)laminr|optiscaler|reshade'}catch{}}
+ return $false
+}
+function RemoveUnreferencedBackups($Manifest,[string]$Folder){
+ $root=OwnedPath $Folder 'Backups';$keep=@($Manifest.Files|Where-Object Backup|ForEach-Object {OwnedPath $Folder $_.Backup})
+ if(Test-Path -LiteralPath $root){foreach($f in Get-ChildItem -LiteralPath $root -File -Recurse){$safe=OwnedPath $Folder $f.FullName.Substring($Folder.Length+1);if($safe -notin $keep){Remove-Item -LiteralPath $safe -Force}}}
+}
+function FindFusionConflicts([string]$Game){
+ foreach($name in @('ReShade.ini','OptiScaler.ini','laminr.ini','nvngx_dlssnr.dll','nvngx.dll_dlssnr.dll')){if(Test-Path -LiteralPath (Join-Path $Game $name) -PathType Leaf){[pscustomobject]@{Path=$name;Recognised=$true;Description='Graphics mod file';Hash=(HashFile (Join-Path $Game $name))}}}
+ foreach($addon in Get-ChildItem -LiteralPath $Game -Filter '*.addon64' -File -ErrorAction SilentlyContinue|Where-Object Name -match '(?i)dlss5|renodx'){
+  [pscustomobject]@{Path=$addon.Name;Recognised=$true;Description='External neural-rendering/ReShade add-on';Hash=(HashFile $addon.FullName)}
+ }
+ foreach($name in @('dxgi.dll','d3d12.dll','d3d11.dll','d3d9.dll','opengl32.dll','OptiScaler.dll','ReShade64.dll','winmm.dll','version.dll','dbghelp.dll','wininet.dll','winhttp.dll','dinput8.dll','SpecialK64.dll','ReShade.asi','OptiScaler.asi')){
+  $file=Join-Path $Game $name
+  if(Test-Path -LiteralPath $file -PathType Leaf){
+   $info=[Diagnostics.FileVersionInfo]::GetVersionInfo($file);$description="$($info.ProductName) $($info.FileDescription) $($info.OriginalFilename)"
+   $recognised=$description -match '(?i)reshade|optiscaler|laminr|special.?k|enbseries'
+   [pscustomobject]@{Path=$name;Recognised=$recognised;Description=$description.Trim();Hash=(HashFile $file)}
+  }
+ }
+}
+function InstallFusion([string]$Game,[string]$Payload,[string]$StateRoot,[string]$Installer,[string]$Proxy='winmm.dll',[object[]]$ReplaceMods=@(),[bool]$ReplaceExisting=$false,[bool]$PreserveConfiguration=$false,[bool]$IncludeEffects=$true){
+    if($Proxy -notin @('winmm.dll','dxgi.dll','d3d12.dll','version.dll','dbghelp.dll','wininet.dll','winhttp.dll')){throw 'Unsupported installation method.'}
+    $Game=FullPath $Game;$Payload=FullPath $Payload;AssertClosed $Game
+    if(-not(Test-Path -LiteralPath $Game -PathType Container)){throw 'Choose the game folder first.'}
+    $mp=ManifestPath $StateRoot $Game
+    $old=$null;$oldJson=$null
+    if(Test-Path -LiteralPath $mp){$oldJson=Get-Content -LiteralPath $mp -Raw;$old=ReadLaminrState $mp;if($old.Status -ne 'Restored' -and -not $ReplaceExisting){throw 'laminr is already recorded here. Choose Repair or approve reinstalling it.'};if($old.Status -eq 'Restored'){$old=$null}}
+    if($old -and $old.PSObject.Properties['IncludeEffects']){$IncludeEffects=[bool]$old.IncludeEffects}
+    elseif($old -and $old.Downloads -eq 'Complete' -and -not(Test-Path -LiteralPath (Join-Path $Game 'laminrData/Shaders'))){$IncludeEffects=$false}
+    if($old){foreach($f in $old.Files){if($f.Backup -and (HashFile (OwnedPath (Split-Path $mp) $f.Backup)) -ne $f.PreviousHash){throw "Original backup is missing or damaged: $($f.Path). Keep the installation and recover its backup before replacing it."}}}
+    $conflicts=@(FindFusionConflicts $Game)
+    foreach($conflict in $conflicts){
+        $approved=@($ReplaceMods|Where-Object {$_.Path -eq $conflict.Path -and $_.Hash -eq $conflict.Hash})
+        if(-not $approved.Count){throw "Approval is needed to back up and replace $($conflict.Path). The file was left untouched."}
+    }
+    $data=OwnedPath $Game 'laminrData'
+    if(Test-Path -LiteralPath $data){
+        $presetRoot=OwnedPath $Game 'laminrData/Presets'
+        foreach($entry in Get-ChildItem -LiteralPath $data -Force -Recurse){
+            if($entry.Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Linked laminr data was left untouched.'}
+            if(-not $ReplaceExisting -and -not $entry.PSIsContainer -and -not($entry.FullName.StartsWith($presetRoot+'\',[StringComparison]::OrdinalIgnoreCase) -and $entry.Extension -eq '.ini')){throw 'Existing laminr files detected. Approve a backed-up reinstall to continue.'}
+        }
+    }
+    $catalog=ReadLaminrJson (Join-Path $Payload 'files.json') 'Payload catalogue JSON' -Shape Array
+    $folder=Split-Path $mp;New-Item -ItemType Directory -Path (Join-Path $folder 'Backups') -Force|Out-Null
+    $files=@();$index=0;$transaction=[guid]::NewGuid().ToString('N')
+    # Keep the original ownership chain across upgrades. Orphaned data is backed up
+    # as pre-existing user data so Restore can recover it instead of deleting it.
+    if($old){$files=@($old.Files|ForEach-Object {@{Path=$_.Path;SourcePath='';Hash=$_.Hash;PreviousHash=$_.PreviousHash;Backup=$_.Backup;Mutable=$_.Mutable;Retained=($_.Path -match '^laminrData[\\/](Presets|Shaders|Textures)[\\/]' -or ($PreserveConfiguration -and $_.Path -match '\.ini$') -or $_.Path -match 'Effects-install\.json$' -or $_.Path -eq 'nvngx_dlssnr.dll')}})}
+    elseif($ReplaceExisting -and (Test-Path -LiteralPath $data)){
+        foreach($entry in Get-ChildItem -LiteralPath $data -File -Recurse -Force){
+            $relative=$entry.FullName.Substring($Game.Length+1);$previous=HashFile $entry.FullName
+            $keep=$relative -match '^laminrData[\\/](Presets|Shaders|Textures)[\\/]'
+            $files+=@{Path=$relative;SourcePath='';Hash=$(if($keep){$previous}else{''});PreviousHash='';Backup='';Mutable=$true;Retained=$keep}
+        }
+    }
+    # Retire unchanged bundled shader/texture assets no longer shipped. Imported
+    # assets (no payload source), edited files and user presets remain untouched.
+    if($old){foreach($previous in $old.Files){
+        if($previous.SourcePath -and $previous.Path -match '^laminrData[\\/](Shaders|Textures)[\\/]' -and $previous.SourcePath -notin $catalog.Path -and (HashFile (OwnedPath $Game $previous.Path)) -eq $previous.Hash){
+            foreach($tracked in @($files|Where-Object Path -eq $previous.Path)){$tracked.Retained=$false;$tracked.Hash=''}
+        }
+    }}
+    foreach($entry in $catalog){
+        $bundledLook=$entry.Path -match '^laminrData[\\/]Presets[\\/]My look\.ini$'
+        if(-not $IncludeEffects -and $entry.Path -match '^laminrData[\\/](Shaders|Textures|Presets)[\\/]' -and -not $bundledLook){continue}
+        $source=OwnedPath $Payload $entry.Path;$relative=if($entry.Path -eq 'winmm.dll'){$Proxy}else{$entry.Path};$dest=OwnedPath $Game $relative
+        $sourceHash=try{HashFile $source}catch{''}
+        if($sourceHash -ne $entry.Hash){throw ("Installer verification failed for $($entry.Path). The extracted file is missing or differs from the packaged copy. No game files have been changed."+(GetDefenderFileEvidence $source)+' Close the manager and use a fresh copy of the installer. Do not replace the DLL from another website.')}
+        # Keep download receipts on repair/reinstall; bundled defaults must not erase them.
+        if($relative -match '^laminrData[\\/]Effects-install\.json$' -and (Test-Path -LiteralPath $dest)){continue}
+        # A returning user's saved default look is their preset, not disposable payload.
+        if($relative -match '^laminrData[\\/]Presets[\\/].*\.ini$' -and (Test-Path -LiteralPath $dest)){continue}
+        if($PreserveConfiguration -and $relative -match '\.ini$' -and (Test-Path -LiteralPath $dest)){
+            if($files.Path -notcontains $relative){
+                $previous=HashFile $dest;$backup='Backups/'+$transaction+'-config-'+$index
+                Copy-Item -LiteralPath $dest -Destination (OwnedPath $folder $backup)
+                if((HashFile (OwnedPath $folder $backup)) -ne $previous){throw 'Configuration backup verification failed.'}
+                $files+=@{Path=$relative;SourcePath=$entry.Path;Hash=$previous;PreviousHash=$previous;Backup=$backup;Mutable=$true;Retained=$true};$index++
+            }
+            continue
+        }
+        $existing=@($files|Where-Object Path -eq $relative)
+        if($existing.Count){$previous=$existing[0].PreviousHash;$backup=$existing[0].Backup;$files=@($files|Where-Object Path -ne $relative)}
+        else{$previous=HashFile $dest;$backup='';if($previous){$backup='Backups/'+$transaction+'-'+$index;Copy-Item -LiteralPath $dest -Destination (OwnedPath $folder $backup);if((HashFile (OwnedPath $folder $backup)) -ne $previous){throw 'Backup verification failed.'}}}
+        $files+=@{Path=$relative;SourcePath=$entry.Path;Hash=$entry.Hash;PreviousHash=$previous;Backup=$backup;Mutable=(($entry.Path -match '\.(ini|log)$') -or ($entry.Path -match '^laminrData[\\/]Effects-install\.json$'));Retained=$false};$index++
+    }
+    foreach($conflict in $conflicts){
+        if($files.Path -contains $conflict.Path){
+            $tracked=@($files|Where-Object Path -eq $conflict.Path)[0]
+            if($PreserveConfiguration -and $tracked.Retained -and $conflict.Path -match '\.ini$'){continue}
+            if($tracked.Retained -and $conflict.Path -eq 'nvngx_dlssnr.dll'){continue};if($tracked.Retained){$tracked.Retained=$false;$tracked.Hash=''}
+            continue
+        }
+        $backup='Backups/'+$transaction+'-mod-'+$index;$previous=$conflict.Hash;$source=OwnedPath $Game $conflict.Path
+        Copy-Item -LiteralPath $source -Destination (OwnedPath $folder $backup)
+        if((HashFile (OwnedPath $folder $backup)) -ne $previous){throw 'Existing mod backup verification failed.'}
+        $files+=@{Path=$conflict.Path;SourcePath='';Hash='';PreviousHash=$previous;Backup=$backup;Mutable=$false};$index++
+    }
+    $rollback=@();$rollbackFolder=OwnedPath $folder ('Rollback/'+$transaction);New-Item -ItemType Directory -Path $rollbackFolder -Force|Out-Null
+    foreach($entry in $files|Where-Object {-not $_.Retained}){
+        $dest=OwnedPath $Game $entry.Path;$hash=HashFile $dest;$copy=Join-Path $rollbackFolder ([string]$rollback.Count)
+        if($hash){Copy-Item -LiteralPath $dest -Destination $copy;if((HashFile $copy) -ne $hash){throw 'Rollback snapshot verification failed.'}}
+        $rollback+=@{Path=$entry.Path;Hash=$hash;Copy=$copy}
+    }
+    $manifest=@{Version=(GetBundledLaminrVersion);Game=$Game;Installer=(FullPath $Installer);Status='Installing';Files=$files;OwnedDirectories=@('laminrData');IncludeEffects=$IncludeEffects;PreserveThirdParty=$true;Created=(Get-Date -Format o)}
+    WriteState $manifest $mp
+    try{
+        # The entry-point proxy is copied last so an incomplete install cannot start.
+        foreach($entry in ($files|Sort-Object @{Expression={$_.SourcePath -eq 'winmm.dll'}})){
+            if($entry.Retained){continue}
+            $dest=OwnedPath $Game $entry.Path;New-Item -ItemType Directory -Path (Split-Path $dest) -Force|Out-Null
+            $snapshot=@($rollback|Where-Object Path -eq $entry.Path)[0]
+            if((HashFile $dest) -ne $snapshot.Hash){throw 'An existing file changed during installation.'}
+            if(-not $entry.SourcePath){if(Test-Path -LiteralPath $dest){Remove-Item -LiteralPath $dest -Force};continue}
+            try{
+                Copy-Item -LiteralPath (OwnedPath $Payload $entry.SourcePath) -Destination $dest -Force
+                if((HashFile $dest) -ne $entry.Hash){throw 'Copied file is missing or differs from the packaged copy.'}
+            }catch{
+                throw ("Installed file verification failed for $($entry.Path). The file could not be copied or verified."+(GetDefenderFileEvidence $dest))
+            }
+        }
+        $manifest.Status='Installed';WriteState $manifest $mp
+    }catch{
+        $failure=$_
+        foreach($entry in $rollback){$dest=OwnedPath $Game $entry.Path;if($entry.Hash){Copy-Item -LiteralPath $entry.Copy -Destination $dest -Force}else{if(Test-Path -LiteralPath $dest){Remove-Item -LiteralPath $dest -Force}}}
+        if($oldJson){$oldJson|Set-Content -LiteralPath $mp -Encoding UTF8}else{Remove-Item -LiteralPath $mp -Force}
+        throw $failure
+    }
+    foreach($entry in $rollback){if(Test-Path -LiteralPath $entry.Copy){Remove-Item -LiteralPath $entry.Copy -Force}}
+    Remove-Item -LiteralPath $rollbackFolder
+    RemoveUnreferencedBackups $manifest $folder
+    $mp
+}
+function RemoveRecordedLaminrLoaders($Manifest,[string]$ManifestPath){
+    # Identify our loader by the recorded payload hash, never just a proxy filename.
+    $hashes=@($Manifest.Files|Where-Object {$_.SourcePath -eq 'winmm.dll' -and $_.Hash}|ForEach-Object Hash)
+    if(-not $hashes.Count){return}
+    foreach($name in @('winmm.dll','dxgi.dll','d3d12.dll','version.dll','dbghelp.dll','wininet.dll','winhttp.dll','dinput8.dll','OptiScaler.dll')){
+        $file=OwnedPath $Manifest.Game $name
+        $hash=HashFile $file
+        if($hash -and $hash -in $hashes){
+            AssertClosed $Manifest.Game
+            Remove-Item -LiteralPath $file -Force
+            if(Test-Path -LiteralPath $file){throw ('laminr loader is still present: '+$file)}
+        }
+    }
+}
+function GetShaderRecoveryRoot { Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'laminr-Recovery' }
+function TestLegacyMutableReShadeLog($Manifest,$Entry,[string]$File){
+    # Migrate only the old root-log receipt shapes. This is not a generic
+    # extension-based exception: unknown receipts and all DLL hashes still fail.
+    if($Entry.Path -cne 'ReShade.log' -or $Entry.Mutable -or $Manifest.Status -notin @('Installed','Installing')){return $false}
+    if($Manifest.Version -notmatch '^P0\.(?:20(?:\.\d{1,2})?(?:-MSFS24)?|21(?:\.[1-3])?(?:-beta\.[1-4])?(?:-MSFS24)?)$'){return $false}
+    if(@($Manifest.Files|Where-Object Path -eq 'ReShade.log').Count -ne 1){return $false}
+    if(-not @($Manifest.Files|Where-Object {$_.SourcePath -eq 'winmm.dll' -and $_.Hash -match '^[A-Fa-f0-9]{64}$'}).Count){return $false}
+    $packaged=$Entry.SourcePath -ceq 'ReShade.log' -and $Entry.Hash -match '^[A-Fa-f0-9]{64}$'
+    $displaced=-not $Entry.SourcePath -and -not $Entry.Hash -and $Entry.Backup -and $Entry.PreviousHash -match '^[A-Fa-f0-9]{64}$'
+    if(-not($packaged -or $displaced)){return $false}
+    # Confirm this is recognisable ReShade output, never arbitrary changed data.
+    # Read a bounded header even when a long session has produced a large log.
+    $stream=[IO.File]::OpenRead($File)
+    try{$bytes=New-Object byte[] 65536;$length=$stream.Read($bytes,0,$bytes.Length);$header=[Text.Encoding]::UTF8.GetString($bytes,0,$length)}finally{$stream.Dispose()}
+    return $header -match '(?m)^\d{2}:\d{2}:\d{2}:\d{3}\s+\[\s*\d+\s*\]\s+\|\s*INFO\s*\|\s*Initializing ReShade version\s'
+}
+function RestoreFusion([string]$ManifestPath,[bool]$KeepPresets=$true){
+    $m=ReadLaminrState $ManifestPath
+    if($m.Status -eq 'Restored'){
+        AssertClosed $m.Game
+        RemoveRecordedLaminrLoaders $m $ManifestPath
+        if(-not $KeepPresets){
+            AssertClosed $m.Game;$presets=OwnedPath $m.Game 'laminrData/Presets'
+            if(Test-Path -LiteralPath $presets){
+                if(Get-ChildItem -LiteralPath $presets -Force -Recurse|Where-Object {$_.Attributes -band [IO.FileAttributes]::ReparsePoint}){throw 'Linked preset files were left untouched.'}
+                Get-ChildItem -LiteralPath $presets -Filter '*.ini' -File -Recurse | Remove-Item -Force
+                Get-ChildItem -LiteralPath $presets -Directory -Recurse | Sort-Object {$_.FullName.Length} -Descending | ForEach-Object {if(-not(Get-ChildItem -LiteralPath $_.FullName -Force)){Remove-Item -LiteralPath $_.FullName}}
+                if(-not(Get-ChildItem -LiteralPath $presets -Force)){Remove-Item -LiteralPath $presets}
+                $data=OwnedPath $m.Game 'laminrData';if(-not(Get-ChildItem -LiteralPath $data -Force)){Remove-Item -LiteralPath $data}
+            }
+        }
+        return
+    }
+    AssertClosed $m.Game;$folder=Split-Path $ManifestPath
+    $checkFiles=@($m.Files|ForEach-Object {OwnedPath $m.Game $_.Path})
+    foreach($relative in $m.OwnedDirectories){$dir=OwnedPath $m.Game $relative;if(Test-Path -LiteralPath $dir){$checkFiles+=@(Get-ChildItem -LiteralPath $dir -File -Recurse -Force|ForEach-Object FullName)}}
+    foreach($file in $checkFiles|Select-Object -Unique){if(Test-Path -LiteralPath $file -PathType Leaf){
+        try{$handle=[IO.File]::Open($file,[IO.FileMode]::Open,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None);$handle.Dispose()}
+        catch{throw ('Restore has not changed any files. Close MSFS and any log viewers, then retry. File is locked or not writable: '+$file)}
+    }}
+    $changedShaders=@();$changedLogs=@()
+    foreach($f in $m.Files){
+        $dest=OwnedPath $m.Game $f.Path;$actual=HashFile $dest
+        # Older manifests incorrectly classified the installer-maintained FX receipt as immutable.
+        $mutable=$f.Mutable -or ($f.Path -match '^laminrData[\\/]Effects-install\.json$')
+        if($actual -and -not $mutable -and $actual -ne $f.Hash -and $actual -ne $f.PreviousHash){
+            if(TestLegacyMutableReShadeLog $m $f $dest){
+                $changedLogs+=@{Path=$f.Path;Hash=$actual}
+            }elseif($f.Path -match '^laminrData[\\/]Shaders[\\/].+\.(fx|fxh|h|hlsl)$'){
+                $changedShaders+=@{Path=$f.Path;Hash=$actual}
+            }else{throw "A file changed after installation: $($f.Path). Restore stopped before changing anything."}
+        }
+        if($f.Backup -and (HashFile (OwnedPath $folder $f.Backup)) -ne $f.PreviousHash){throw "Original backup failed verification: $($f.Path)"}
+    }
+    foreach($relative in $m.OwnedDirectories){
+        $dir=OwnedPath $m.Game $relative
+        if(Test-Path -LiteralPath $dir){if(Get-ChildItem -LiteralPath $dir -Force -Recurse|Where-Object {$_.Attributes -band [IO.FileAttributes]::ReparsePoint}){throw 'A linked item was found in laminr data. Cleanup stopped.'}}
+    }
+    # A legacy log exception is allowed only after a full verified preservation
+    # copy succeeds. Keep it outside the app store so Uninstall cannot delete it.
+    if($changedLogs.Count){
+        $recovery=OwnedPath (GetShaderRecoveryRoot) ('Logs-'+[guid]::NewGuid().ToString('N'))
+        foreach($log in $changedLogs){
+            $copy=OwnedPath $recovery $log.Path
+            New-Item -ItemType Directory -Path (Split-Path $copy) -Force|Out-Null
+            [IO.File]::Copy((OwnedPath $m.Game $log.Path),$copy,$false)
+            if((HashFile $copy) -ne $log.Hash){throw 'Log recovery copy failed verification. Game files have not been removed.'}
+        }
+        $m|Add-Member -NotePropertyName RecoveredLogs -NotePropertyValue $recovery -Force
+        WriteState $m $ManifestPath
+        Write-Warning ('Changed legacy ReShade log was preserved in: '+$recovery)
+    }
+    # Preserve edited, manifest-owned shader sources outside the game before cleanup.
+    # Do not extend this exception to loaders or other executable content.
+    if($changedShaders.Count){
+        $recovery=OwnedPath (GetShaderRecoveryRoot) ('Shaders-'+[guid]::NewGuid().ToString('N'))
+        foreach($shader in $changedShaders){
+            $copy=OwnedPath $recovery $shader.Path
+            New-Item -ItemType Directory -Path (Split-Path $copy) -Force|Out-Null
+            [IO.File]::Copy((OwnedPath $m.Game $shader.Path),$copy,$false)
+            if((HashFile $copy) -ne $shader.Hash){throw 'Changed shader recovery copy failed verification. Game files have not been removed.'}
+        }
+        $m|Add-Member -NotePropertyName RecoveredShaders -NotePropertyValue $recovery -Force
+        WriteState $m $ManifestPath
+        Write-Warning ('Changed shader sources were preserved in: '+$recovery)
+    }
+    $presets=OwnedPath $m.Game 'laminrData/Presets'
+    foreach($f in $m.Files){$dest=OwnedPath $m.Game $f.Path;if($KeepPresets -and $dest.StartsWith($presets+'\',[StringComparison]::OrdinalIgnoreCase) -and [IO.Path]::GetExtension($dest) -eq '.ini'){continue};if($f.Backup){Copy-Item -LiteralPath (OwnedPath $folder $f.Backup) -Destination $dest -Force}elseif(Test-Path -LiteralPath $dest){Remove-Item -LiteralPath $dest -Force}}
+    $restoredPaths=@($m.Files|Where-Object Backup|ForEach-Object {OwnedPath $m.Game $_.Path})
+    foreach($relative in $m.OwnedDirectories){$dir=OwnedPath $m.Game $relative;if(Test-Path -LiteralPath $dir){
+        Get-ChildItem -LiteralPath $dir -Force -Recurse -File | Where-Object {$_.FullName -notin $restoredPaths -and -not($KeepPresets -and $_.FullName.StartsWith($presets+'\',[StringComparison]::OrdinalIgnoreCase) -and $_.Extension -eq '.ini')} | Remove-Item -Force
+        Get-ChildItem -LiteralPath $dir -Force -Recurse -Directory | Sort-Object {$_.FullName.Length} -Descending | ForEach-Object {if(-not(Get-ChildItem -LiteralPath $_.FullName -Force)){Remove-Item -LiteralPath $_.FullName}}
+        if(-not(Get-ChildItem -LiteralPath $dir -Force)){Remove-Item -LiteralPath $dir}
+    }}
+    RemoveRecordedLaminrLoaders $m $ManifestPath
+    foreach($f in $m.Files){
+        $dest=OwnedPath $m.Game $f.Path
+        if($KeepPresets -and $dest.StartsWith($presets+'\',[StringComparison]::OrdinalIgnoreCase) -and [IO.Path]::GetExtension($dest) -eq '.ini'){continue}
+        $ours=@($m.Files|Where-Object {$_.SourcePath -eq 'winmm.dll'}|ForEach-Object Hash)
+        if($f.Backup -and $f.PreviousHash -notin $ours){if((HashFile $dest) -ne $f.PreviousHash){throw ('Restored file verification failed: '+$f.Path)}}
+        elseif(Test-Path -LiteralPath $dest){throw ('Removal verification failed: '+$f.Path)}
+    }
+    $m.Status='Restored';WriteState $m $ManifestPath;RemoveUnreferencedBackups $m $folder
+}
+function ImportNrRuntime([string]$ManifestPath,[string]$Source){
+    $m=ReadLaminrState $ManifestPath;if($m.Status -ne 'Installed'){throw 'Install laminr into a game first.'};AssertClosed $m.Game
+    $hash=HashFile $Source
+    $cards=@(Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue|ForEach-Object Name)
+    if($cards.Count -and -not($cards -match 'RTX\s*50')){throw 'This neural-rendering runtime needs an NVIDIA RTX 50-series card.'}
+    if($hash -ne 'E16BCF15E16E13F527491CDF7845B2FE6521A738D8F7C9C721866A8496E1FC8E'){throw 'Choose the original RTX 50 runtime (nvngx_dlssnr.dll 310.8.0).'}
+    if((Get-AuthenticodeSignature -LiteralPath $Source).Status -ne 'Valid'){throw 'NVIDIA runtime signature verification failed.'}
+    $relative='nvngx_dlssnr.dll';$dest=OwnedPath $m.Game $relative;$existing=@($m.Files|Where-Object Path -eq $relative)
+    if((FullPath $Source) -eq (FullPath $dest) -and $existing.Count -and $existing[0].Hash -eq $hash){return}
+    $originalManifest=Get-Content -LiteralPath $ManifestPath -Raw
+    $old=HashFile $dest
+    $snapshot=OwnedPath (Split-Path $ManifestPath) ('Backups/nr-import-'+[guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path (Split-Path $snapshot) -Force|Out-Null
+    if($old){Copy-Item -LiteralPath $dest -Destination $snapshot;if((HashFile $snapshot) -ne $old){throw 'Runtime rollback snapshot failed verification.'}}
+    try{
+    if(-not $existing.Count){
+        $m.Files+=@{Path=$relative;Hash=$hash;PreviousHash=$old;Backup=$(if($old){'Backups/'+[IO.Path]::GetFileName($snapshot)}else{''});Mutable=$false};WriteState $m $ManifestPath
+    }
+    if((FullPath $Source) -ne (FullPath $dest)){Copy-Item -LiteralPath $Source -Destination $dest -Force}
+    if((HashFile $dest) -ne $hash){throw 'Imported runtime verification failed.'}
+    foreach($entry in $m.Files){if($entry.Path -eq $relative){$entry.Hash=$hash}}
+    WriteState $m $ManifestPath
+    }catch{
+        $failure=$_
+        if((HashFile $dest) -ne $old){if($old){Copy-Item -LiteralPath $snapshot -Destination $dest -Force}else{Remove-Item -LiteralPath $dest -Force -ErrorAction SilentlyContinue}}
+        if((HashFile $dest) -ne $old){throw ('Runtime rollback failed; retain backup at '+$snapshot)}
+        $originalManifest|Set-Content -LiteralPath $ManifestPath -Encoding UTF8
+        throw $failure
+    }
+    if($existing.Count -and (Test-Path -LiteralPath $snapshot)){Remove-Item -LiteralPath $snapshot -Force}
+}
+function UninstallFusion([string]$StateRoot,[string]$Installer,[string]$ActiveSession='',[bool]$KeepPresets=$true){
+    $root=FullPath $StateRoot;$keep=FullPath $Installer
+    if(-not(Test-Path -LiteralPath $root)){return}
+    $portableRoot=Join-Path (Split-Path $keep -Parent) 'Data'
+    $portable=($env:LAMINR_PORTABLE -eq '1' -and $root -eq (FullPath $portableRoot) -and (Test-Path -LiteralPath (Join-Path (Split-Path $keep -Parent) 'portable.txt') -PathType Leaf))
+    if((Split-Path $root -Leaf) -ne 'laminr' -and -not $portable){throw 'Cleanup requires the dedicated laminr storage folder.'}
+    [void](OwnedPath $root 'cleanup-check')
+    $records=@(Get-ChildItem -LiteralPath (Join-Path $root 'Games') -Filter manifest.json -File -Recurse -ErrorAction SilentlyContinue)
+    if(-not $records.Count){throw 'No recorded game installations were found. Uninstall cannot confirm removal of untracked files. Select the actual game folder in Setup and inspect its installation before trying again.'}
+    foreach($m in $records){RestoreFusion $m.FullName -KeepPresets $KeepPresets}
+    if(Get-ChildItem -LiteralPath $root -Force -Recurse | Where-Object {$_.Attributes -band [IO.FileAttributes]::ReparsePoint}){throw 'A linked item was found in laminr storage. Cleanup stopped.'}
+    # Delete only the dedicated application store; never search the PC by filename.
+    $session=''
+    if($ActiveSession){$candidate=FullPath $ActiveSession;if($candidate.StartsWith($root+'\Sessions\',[StringComparison]::OrdinalIgnoreCase)){$session=$candidate+'\'}}
+    if($session -or $keep.StartsWith($root+'\',[StringComparison]::OrdinalIgnoreCase)){
+        Get-ChildItem -LiteralPath $root -Force -Recurse -File|Where-Object {(FullPath $_.FullName) -ne $keep -and (-not $session -or -not $_.FullName.StartsWith($session,[StringComparison]::OrdinalIgnoreCase))}|Remove-Item -Force
+        Get-ChildItem -LiteralPath $root -Force -Recurse -Directory|Sort-Object FullName -Descending|ForEach-Object {if(-not(Get-ChildItem -LiteralPath $_.FullName -Force)){Remove-Item -LiteralPath $_.FullName}}
+    }else{Remove-Item -LiteralPath $root -Recurse -Force}
+}
+
+function GetSnapshotRemovalPlan([string]$ReceiptRoot='',[string[]]$GameRoots) {
+ $root=if($ReceiptRoot){FullPath $ReceiptRoot}else{Join-Path ([Environment]::GetFolderPath('LocalApplicationData')) 'laminr-SnapShot'}
+ if((Split-Path $root -Leaf) -ne 'laminr-SnapShot'){throw 'Invalid snapshot record folder.'}
+ if(-not(Test-Path -LiteralPath $root)){return}
+ [void](OwnedPath $root 'check')
+ foreach($receipt in Get-ChildItem -LiteralPath $root -Filter 'laminr-*.txt' -File){
+  $safe=OwnedPath $root $receipt.Name
+  $lines=[IO.File]::ReadAllLines($safe,[Text.Encoding]::UTF8)
+  if($lines.Count -notin @(3,4) -or $lines[2] -notmatch '^[a-fA-F0-9]{64}$'){throw "Invalid SnapShot record: $safe. No snapshot cleanup was performed."}
+  $file=FullPath $lines[0];$folder=Split-Path $file -Parent;$name=Split-Path $file -Leaf
+  $captureGame=if($lines.Count -eq 4){FullPath $lines[3]}else{FullPath (Split-Path $folder -Parent)}
+  if($PSBoundParameters.ContainsKey('GameRoots') -and $captureGame -notin $GameRoots){continue}
+  if((Split-Path $folder -Leaf) -cne 'laminr Snapshots' -or $name -notmatch '^laminr-\d{8}-\d{6}-\{[a-fA-F0-9-]{36}\}\.(png|jpg)$' -or [IO.Path]::GetFileNameWithoutExtension($name) -cne $receipt.BaseName){throw 'Invalid SnapShot ownership record. Cleanup stopped.'}
+  [void](OwnedPath $folder $name)
+  if(Test-Path -LiteralPath $file){
+   if((Get-Item -LiteralPath $file).Length -ne [long]$lines[1] -or (HashFile $file) -ne $lines[2]){throw "This snapshot has changed since capture and will not be deleted automatically: $file"}
+  }
+  [pscustomobject]@{File=$file;Receipt=$safe;Folder=$folder}
+ }
+}
+function RemoveSelectedLaminrData([string]$StateRoot,[string]$Installer,[string]$ActiveSession,[bool]$AppFiles,[bool]$IniFiles,[bool]$Snapshots){
+ if(-not($AppFiles -or $IniFiles -or $Snapshots)){throw 'Choose at least one item to remove.'}
+ $records=@(Get-ChildItem -LiteralPath (Join-Path $StateRoot 'Games') -Filter manifest.json -File -Recurse -ErrorAction SilentlyContinue)
+ $presets=@()
+ $gameRoots=@()
+ foreach($record in $records){
+  [void](OwnedPath $StateRoot $record.FullName.Substring((FullPath $StateRoot).Length+1))
+  $manifest=ReadLaminrState $record.FullName
+  $gameRoots+=FullPath $manifest.Game
+  AssertClosed $manifest.Game
+  if($IniFiles -and -not $AppFiles){
+   $folder=OwnedPath $manifest.Game 'laminrData/Presets'
+   if(Test-Path -LiteralPath $folder){
+    if(Get-ChildItem -LiteralPath $folder -Recurse -Force|Where-Object {$_.Attributes -band [IO.FileAttributes]::ReparsePoint}){throw 'A linked preset was found. Cleanup stopped.'}
+    $presets+=@(Get-ChildItem -LiteralPath $folder -Filter '*.ini' -File -Recurse|ForEach-Object {OwnedPath $folder $_.FullName.Substring($folder.Length+1)})
+   }
+  }
+ }
+ $captures=if($Snapshots){@(GetSnapshotRemovalPlan -GameRoots $gameRoots)}else{@()}
+ if($AppFiles){UninstallFusion $StateRoot $Installer $ActiveSession -KeepPresets (-not $IniFiles)}
+ foreach($file in $presets){Remove-Item -LiteralPath $file -Force}
+ foreach($capture in $captures){
+  if(Test-Path -LiteralPath $capture.File){Remove-Item -LiteralPath $capture.File -Force}
+  Remove-Item -LiteralPath $capture.Receipt -Force
+  if((Test-Path -LiteralPath $capture.Folder) -and -not(Get-ChildItem -LiteralPath $capture.Folder -Force)){Remove-Item -LiteralPath $capture.Folder}
+ }
+}

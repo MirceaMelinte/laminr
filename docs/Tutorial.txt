@@ -1,0 +1,53 @@
+﻿LAMINR - GETTING STARTED
+Microsoft Flight Simulator 2024 (Steam or Xbox) | NVIDIA GeForce RTX 50 series | DirectX 12
+
+INSTALL
+1. Close the simulator and start the manager. It checks your graphics card and finds your Steam or Xbox copy.
+2. Open Setup and choose your copy under Your installation. If it is missing, click Browse and select the folder that contains FlightSimulator2024.exe (for Xbox, the game's Content folder).
+3. Click Install laminr. Only NVIDIA GeForce RTX 50-series cards are supported.
+4. If your NVIDIA driver is older than 616.92, choose Cancel installation to update it first, or Continue anyway.
+5. When asked "Would you like to install DLSS 5?", choose Yes to download the NVIDIA DLSS and Streamline files and the neural-rendering model, or No for image effects and presets only. Yes does not switch neural rendering on.
+6. If other graphics-mod files are found, the manager asks before replacing them. They are backed up and come back when you restore.
+7. When the status line says the install is complete, close the manager and start the game. If a download failed, open Advanced options and downloads and click Retry unfinished downloads.
+
+OPEN THE MENU
+Press Insert to open or close the menu; Ctrl+Shift+O also works as a recovery shortcut. The pages are Performance, Neural rendering, Image effects and Settings & status. Save settings at the bottom keeps menu changes for this game.
+For the Performance page, select DLSS Super Resolution in the simulator's graphics settings and enter a flight. Frame generation is switched on in the simulator's own settings.
+
+CHANGE THE KEYS
+With the game closed, open Keybinds in the manager, click Change next to Primary key, press one key and click Save shortcuts. The same page sets the Preset hotswap and SnapShot keys, which start unset. Restore default shortcuts goes back to Insert and Ctrl+Shift+O. In game, Settings & status > Keybinds also sets the FPS overlay and neural-rendering keys.
+
+BUILD AND SAVE YOUR LOOK
+Open Image effects. Search with Find an effect... and use the switch beside an effect to turn it on; click its name to see its settings. Active first moves enabled effects to the top.
+Click Save preset..., enter a name and click Save preset. Nothing is saved automatically. Other presets are never overwritten, and your current one is only replaced if you tick I understand - replace my current saved preset. Revert changes goes back to the saved version.
+Choose a look from the Preset 1 list to load it. To flip between two looks, pick another under Preset 2 and click Switch preset or press your Preset hotswap key.
+
+IMPORT A PRESET
+Click Import INI..., find the downloaded INI and click Copy INI and load look. The INI is copied into the game's presets folder and your original stays in place. If FX files are missing, Install missing FX and load INI downloads matching packs from the built-in catalogue while you keep flying. FX that are not in the catalogue must come from the preset author's ZIP.
+Install FX... copies one .fx file into laminrData\Shaders\Custom. Install ZIP... extracts the FX, INI, include and texture files from a ZIP without overwriting existing shaders; then choose its INI under Preset 1.
+Rescan installed FX list finds shaders already in the game folder. Recompile installed FX reloads shader code.
+To install a preset from the manager, tick Install with your own INI on Setup, click Choose INI... and then Install laminr, or Install selected INI if laminr is already installed.
+
+WHERE YOUR INI PRESETS GO
+Presets live in laminrData\Presets inside the folder that contains FlightSimulator2024.exe:
+
+Xbox / Microsoft Store:
+<Microsoft Flight Simulator 2024 installation>\Content\laminrData\Presets\Your look.ini
+
+Steam:
+<folder containing FlightSimulator2024.exe>\laminrData\Presets\Your look.ini
+
+The Setup page shows this folder. Do not put presets in the Community folder or use one to replace laminr.ini, ReShade.ini or the game's own INI files. After copying a preset by hand, choose it under Preset 1. Copying an INI does not install the FX and texture files it needs.
+
+NEURAL RENDERING
+Neural rendering (DLSS 5) needs the files from choosing Yes at install time. Open Neural rendering and tick Use neural rendering; Model status shows Running when it works. Start with one pass. It always starts off when the game starts, but your tuning is kept.
+
+SNAPSHOT
+Press your SnapShot key, or click Take screenshot under Settings & status > Keybinds. Pictures are saved as PNG in the laminr Snapshots folder in the game folder; another folder or JPEG can be chosen there. Browse screenshots opens the folder.
+
+MENU SIZE, FPS AND COLOUR
+Settings & status has Menu size (Auto, or 100% to 200%), the FPS overlay (Page Up shows or hides it, Page Down cycles the detail) and Overlay colour (Purple is the default). Press Save settings to keep them.
+
+UPDATE, REPAIR, RESTORE AND UNINSTALL
+Close the game first. To update, run the newer manager and click Update laminr on Setup. Repair laminr replaces the program files and keeps settings, keys and presets; it needs the manager that matches the installed version. Restore original files removes laminr's files and puts back its backups; saved presets and snapshots stay. Settings > Uninstall laminr restores every recorded installation and lets you choose whether to remove app files, INI files and snapshots.
+If the menu does not appear or the screen goes black, try Troubleshooting > Back up and reset laminr settings first. It resets settings, keys and menu colour and selects an empty look; saved presets are kept.

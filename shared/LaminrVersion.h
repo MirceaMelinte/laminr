@@ -1,0 +1,15 @@
+#pragma once
+#include <array>
+
+// Shared by the overlay title and release comparison; not the upstream engine version.
+#define LAMINR_VERSION_MAJOR 0
+#define LAMINR_VERSION_MINOR 0
+#define LAMINR_VERSION_PATCH 1
+#define LAMINR_VERSION_REVISION 0
+#define LAMINR_STRINGIFY_IMPL(x) #x
+#define LAMINR_STRINGIFY(x) LAMINR_STRINGIFY_IMPL(x)
+#define LAMINR_VERSION_TEXT LAMINR_STRINGIFY(LAMINR_VERSION_MAJOR) "." LAMINR_STRINGIFY(LAMINR_VERSION_MINOR) "." LAMINR_STRINGIFY(LAMINR_VERSION_PATCH)
+#define LAMINR_VERSION_DISPLAY LAMINR_VERSION_TEXT " stable"
+namespace LaminrVersion {
+inline constexpr std::array<int, 4> Current{LAMINR_VERSION_MAJOR, LAMINR_VERSION_MINOR, LAMINR_VERSION_PATCH, LAMINR_VERSION_REVISION};
+}

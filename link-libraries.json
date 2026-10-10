@@ -1,0 +1,15 @@
+{
+  "Version": 1,
+  "Libraries": [
+    {
+      "Path": "optiscaler/OptiScaler/library/detours/detours.lib",
+      "Upstream": "OptiScaler/library/detours/detours.lib",
+      "SHA256": "4F5D6F5B8A82C6609E45758D60BBDF29BFCB7956DE1FD4454187A1B4A430B2F9"
+    },
+    {
+      "Path": "optiscaler/external/freetype/freetype.lib",
+      "Upstream": "external/freetype/freetype.lib",
+      "SHA256": "74856E22714BF99F2F04E59CFE77D7C85729E5AA3570030B939048115EF528AD"
+    }
+  ]
+}

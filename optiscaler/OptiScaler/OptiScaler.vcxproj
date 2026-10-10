@@ -1,0 +1,525 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="ReleaseDebug|Win32">
+      <Configuration>ReleaseDebug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="ReleaseDebug|x64">
+      <Configuration>ReleaseDebug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{8d2b73fb-eecd-45ce-b8e5-335610462f58}</ProjectGuid>
+    <RootNamespace>OptiScaler</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseDebug|Win32'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+    <MSVCPreviewEnabled>false</MSVCPreviewEnabled>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseDebug|x64'" Label="Configuration">
+    <ConfigurationType>DynamicLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseDebug|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseDebug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <IncludePath>$(SolutionDir)external\simpleini;$(SolutionDir)\external\nvngx_dlss_sdk;$(SolutionDir)external\unordered_dense\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <IncludePath>$(SolutionDir)external\simpleini;$(SolutionDir)\external\nvngx_dlss_sdk;$(SolutionDir)external\unordered_dense\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseDebug|Win32'">
+    <IncludePath>$(SolutionDir)external\simpleini;$(SolutionDir)\external\nvngx_dlss_sdk;$(SolutionDir)external\unordered_dense\include;$(IncludePath)</IncludePath>
+    <LibraryPath>$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <IncludePath>$(ProjectDir);$(ProjectDir)include\;$(SolutionDir)external\nvngx_dlss_sdk;$(SolutionDir)external\simpleini;$(SolutionDir)external\unordered_dense\include;$(SolutionDir)external\spdlog\include;$(SolutionDir)external\freetype;$(SolutionDir)external\streamline;$(SolutionDir)external\streamline1;$(SolutionDir)external\nvapi;$(SolutionDir)external\nlohmann;$(SolutionDir)external\magic_enum\include\magic_enum;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)library\detours;$(SolutionDir)external\freetype;$(LibraryPath)</LibraryPath>
+    <IntDir>.\x64\Debug\</IntDir>
+    <TargetExt>.dll</TargetExt>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>$(ProjectDir);$(ProjectDir)include\;$(SolutionDir)external\nvngx_dlss_sdk;$(SolutionDir)external\simpleini;$(SolutionDir)external\unordered_dense\include;$(SolutionDir)external\spdlog\include;$(SolutionDir)external\freetype;$(SolutionDir)external\streamline;$(SolutionDir)external\streamline1;$(SolutionDir)external\nvapi;$(SolutionDir)external\nlohmann;$(SolutionDir)external\magic_enum\include\magic_enum;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)library\detours;$(SolutionDir)external\freetype;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseDebug|x64'">
+    <IncludePath>$(ProjectDir);$(ProjectDir)include\;$(SolutionDir)external\nvngx_dlss_sdk;$(SolutionDir)external\simpleini;$(SolutionDir)external\unordered_dense\include;$(SolutionDir)external\spdlog\include;$(SolutionDir)external\freetype;$(SolutionDir)external\streamline;$(SolutionDir)external\streamline1;$(SolutionDir)external\nvapi;$(SolutionDir)external\nlohmann;$(SolutionDir)external\magic_enum\include\magic_enum;$(IncludePath)</IncludePath>
+    <LibraryPath>$(ProjectDir)library\detours;$(SolutionDir)external\freetype;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+      <ModuleDefinitionFile>Source.def</ModuleDefinitionFile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+      <ModuleDefinitionFile>Source.def</ModuleDefinitionFile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseDebug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+      <ModuleDefinitionFile>Source.def</ModuleDefinitionFile>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>_DEBUG;_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <RuntimeTypeInfo>false</RuntimeTypeInfo>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <PrecompiledHeaderOutputFile>$(IntDir)$(TargetName).pch</PrecompiledHeaderOutputFile>
+      <AdditionalOptions>/w34996 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+      <AdditionalDependencies>winhttp.lib;WindowsApp.lib;Dbghelp.lib;dxgi.lib;d3d12.lib;dxguid.lib;freetype.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ModuleDefinitionFile>Source.def</ModuleDefinitionFile>
+      <DelayLoadDLLs>dxgi.dll;d3d12.dll;D3DCOMPILER_47.dll</DelayLoadDLLs>
+      <StackReserveSize>
+      </StackReserveSize>
+      <StackCommitSize>
+      </StackCommitSize>
+      <AdditionalOptions>/ignore:4099</AdditionalOptions>
+    </Link>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+    </PreBuildEvent>
+    <ResourceCompile>
+      <PreprocessorDefinitions>_DEBUG ;_UNICODE;UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NDEBUG;_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <AdditionalOptions>/w34996 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+      <AdditionalDependencies>winhttp.lib;WindowsApp.lib;Dbghelp.lib;dxgi.lib;d3d12.lib;dxguid.lib;freetype.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ModuleDefinitionFile>Source.def</ModuleDefinitionFile>
+      <DelayLoadDLLs>dxgi.dll;d3d12.dll;D3DCOMPILER_47.dll</DelayLoadDLLs>
+      <AdditionalOptions>/ignore:4099</AdditionalOptions>
+    </Link>
+    <PreBuildEvent>
+      <Command>powershell -NoProfile -Command "Start-Sleep -Milliseconds 1500; $date = Get-Date -Format 'yyyyMMdd_HHmmss'; $commit = (git rev-parse --short HEAD 2&gt;$null); if (-not $commit) { $commit = 'unknown' }; Set-Content -Path '$(ProjectDir)resource_build_date.h' -Value ('#define VER_BUILD_DATE \"' + $date + '\"') -Force; Set-Content -Path '$(ProjectDir)resource_build_commit.h' -Value ('#define VER_BUILD_COMMIT \"' + $commit + '\"') -Force;"</Command>
+    </PreBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='ReleaseDebug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <SDLCheck>true</SDLCheck>
+      <PreprocessorDefinitions>NODEBUG;_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR;_WINDOWS;_USRDLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <ConformanceMode>true</ConformanceMode>
+      <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
+      <FloatingPointModel>Fast</FloatingPointModel>
+      <LanguageStandard>stdcpplatest</LanguageStandard>
+      <PrecompiledHeader>Use</PrecompiledHeader>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <AdditionalOptions>/w34996 %(AdditionalOptions)</AdditionalOptions>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <EnableUAC>false</EnableUAC>
+      <AdditionalDependencies>winhttp.lib;WindowsApp.lib;Dbghelp.lib;dxgi.lib;d3d12.lib;dxguid.lib;freetype.lib;d3dcompiler.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <ModuleDefinitionFile>Source.def</ModuleDefinitionFile>
+      <DelayLoadDLLs>dxgi.dll;d3d12.dll;D3DCOMPILER_47.dll</DelayLoadDLLs>
+      <AdditionalOptions>/ignore:4099</AdditionalOptions>
+    </Link>
+    <PostBuildEvent>
+      <Command>powershell -Command "$timestamp = Get-Date -Format 'yyyyMMdd_HHmmss'; $fileName = '$(OutDir)OptiScaler_' + $timestamp + '.7z'; $backupFileName = '$(OutDir)OptiScaler_' + $timestamp + '_Backup.7z'; &amp; '7z.exe' a -t7z $fileName '$(TargetPath)'; &amp; '7z.exe' a -t7z $backupFileName '$(OutDir)$(TargetName).*'"</Command>
+    </PostBuildEvent>
+    <PreBuildEvent>
+      <Command>powershell -NoProfile -Command "Start-Sleep -Milliseconds 1500; $date = Get-Date -Format 'yyyyMMdd_HHmmss'; $commit = (git rev-parse --short HEAD 2&gt;$null); if (-not $commit) { $commit = 'unknown' }; Set-Content -Path '$(ProjectDir)resource_build_date.h' -Value ('#define VER_BUILD_DATE \"' + $date + '\"') -Force; Set-Content -Path '$(ProjectDir)resource_build_commit.h' -Value ('#define VER_BUILD_COMMIT \"' + $commit + '\"') -Force;"</Command>
+    </PreBuildEvent>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClInclude Include="gpu_time\GpuTime_Dx12.h" />
+    <ClInclude Include="DllNames.h" />
+    <ClInclude Include="exports\d3d12.h" />
+    <ClInclude Include="exports\dbghelp.h" />
+    <ClInclude Include="exports\dxgi.h" />
+    <ClInclude Include="exports\exports.h" />
+    <ClInclude Include="exports\shared.h" />
+    <ClInclude Include="exports\version.h" />
+    <ClInclude Include="exports\winhttp.h" />
+    <ClInclude Include="exports\wininet.h" />
+    <ClInclude Include="exports\winmm.h" />
+    <ClInclude Include="dlssnr\PassProfiles.h" />
+    <ClInclude Include="hooks\D3D12_Hooks.h" />
+    <ClInclude Include="hooks\DxgiFactory_Hooks.h" />
+    <ClInclude Include="hooks\DxgiSwapchainSizing.h" />
+    <ClInclude Include="shaders\dlssnr\DlssNr_DeferredSr.inl" />
+    <ClInclude Include="dlssnr\ResidualFg.h" />
+    <ClInclude Include="hooks\Dxgi_Hooks.h" />
+    <ClInclude Include="hooks\Hook_Utils.h" />
+    <ClInclude Include="hooks\LibraryLoad_Hooks.h" />
+    <ClInclude Include="menu\input\input_system.h" />
+    <ClInclude Include="menu\input\input_system_internal.h" />
+    <ClInclude Include="shaders\magnifier\Magnifier_Common.h" />
+    <ClInclude Include="shaders\magnifier\Magnifier_Dx12.h" />
+    <ClInclude Include="shaders\rcas\precompile\da_das_sharpen_Shader.h" />
+    <ClInclude Include="shaders\rcas\precompile\da_rcas_sharpen_Shader.h" />
+    <ClInclude Include="shaders\rcas\precompile\RCAS_Shader.h" />
+    <ClInclude Include="shaders\rcas\shaders\DA_DAS_Shader.h" />
+    <ClInclude Include="shaders\rcas\shaders\DA_RCAS_Shader.h" />
+    <ClInclude Include="shaders\rcas\shaders\RCAS_Shader.h" />
+    <ClInclude Include="shaders\Shader_Common.h" />
+    <ClInclude Include="misc\IdentifyGpu.h" />
+    <ClInclude Include="MathUtils.h" />
+    <ClInclude Include="OptiTypes.h" />
+    <ClInclude Include="shaders\output_scaling\fsr1\ffx_fsr1.h" />
+    <ClInclude Include="shaders\output_scaling\precompile\bcds_kaiser2_Shader.h" />
+    <ClInclude Include="shaders\output_scaling\precompile\bcds_kaiser3_Shader.h" />
+    <ClInclude Include="shaders\output_scaling\precompile\bcds_lanczos2_Shader.h" />
+    <ClInclude Include="shaders\output_scaling\precompile\bcds_lanczos3_Shader.h" />
+    <ClInclude Include="dlssnr\DlssNr_ExposureScan.h" />
+    <ClInclude Include="shaders\Shader_Dx12.h" />
+    <ClInclude Include="shaders\Shader_Dx12Utils.h" />
+    <ClInclude Include="SysUtils.h" />
+    <ClInclude Include="include\spdlog_sink\debug_sink.h" />
+    <ClInclude Include="hooks\Kernel_Hooks.h" />
+    <ClInclude Include="hooks\Ntdll_Hooks.h" />
+    <ClInclude Include="hooks\Streamline_Hooks.h" />
+    <ClInclude Include="include\imgui\imgui_impl_dx12.h" />
+    <ClInclude Include="include\imgui\imgui_impl_uwp.h" />
+    <ClInclude Include="include\imgui\imgui_impl_win32.h" />
+    <ClInclude Include="include\sl.param\parameters.h" />
+    <ClInclude Include="inputs\NVNGX_DLSS.h" />
+    <ClInclude Include="menu\font\Hack_Compressed.h" />
+    <ClInclude Include="misc\FrameLimit.h" />
+    <ClInclude Include="OwnedMutex.h" />
+    <ClInclude Include="proxies\D3D12_Proxy.h" />
+    <ClInclude Include="proxies\Dxgi_Proxy.h" />
+    <ClInclude Include="proxies\Kernel32_Proxy.h" />
+    <ClInclude Include="proxies\KernelBase_Proxy.h" />
+    <ClInclude Include="proxies\Ntdll_Proxy.h" />
+    <ClInclude Include="resource_tracking\ResTrack_dx12.h" />
+    <ClInclude Include="upscalers\dlssd\DLSSDFeature.h" />
+    <ClInclude Include="upscalers\dlssd\DLSSDFeature_Dx12.h" />
+    <ClInclude Include="upscalers\dlss\DLSSFeature.h" />
+    <ClInclude Include="upscalers\dlss\DLSSFeature_Dx12.h" />
+    <ClInclude Include="upscalers\FeatureProvider_Dx12.h" />
+    <ClInclude Include="include\imgui\imconfig.h" />
+    <ClInclude Include="include\imgui\imgui.h" />
+    <ClInclude Include="include\imgui\imgui_internal.h" />
+    <ClInclude Include="include\imgui\imstb_rectpack.h" />
+    <ClInclude Include="include\imgui\imstb_textedit.h" />
+    <ClInclude Include="include\imgui\imstb_truetype.h" />
+    <ClInclude Include="include\imgui\misc\freetype\imgui_freetype.h" />
+    <ClInclude Include="nvapi\NvApiHooks.h" />
+    <ClInclude Include="nvapi\NvApiTypes.h" />
+    <ClInclude Include="nvapi\external\nvapi.h" />
+    <ClInclude Include="Config.h" />
+    <ClInclude Include="upscalers\IFeature_Dx12.h" />
+    <ClInclude Include="upscalers\IFeature.h" />
+    <ClInclude Include="detours\detours.h" />
+    <ClInclude Include="dllmain.h" />
+    <ClInclude Include="menu\menu_dx_base.h" />
+    <ClInclude Include="menu\menu_common.h" />
+    <ClInclude Include="menu\menu_dx12.h" />
+    <ClInclude Include="menu\menu_overlay_base.h" />
+    <ClInclude Include="menu\menu_overlay_dx.h" />
+    <ClInclude Include="wrapped\wrapped_swapchain.h" />
+    <ClInclude Include="Logger.h" />
+    <ClInclude Include="proxies\NVNGX_Proxy.h" />
+    <ClInclude Include="pch.h" />
+    <ClInclude Include="rcas\precompile\RCAS_Shader.h" />
+    <ClInclude Include="rcas\RCAS_Common.h" />
+    <ClInclude Include="rcas\RCAS_Dx12.h" />
+    <ClInclude Include="hooks\Reflex_Hooks.h" />
+    <ClInclude Include="resource.h" />
+    <ClInclude Include="scanner\scanner.h" />
+    <ClInclude Include="shaders\bias\Bias_Common.h" />
+    <ClInclude Include="shaders\bias\Bias_Dx12.h" />
+    <ClInclude Include="shaders\bias\precompile\Bias_Shader.h" />
+    <ClInclude Include="shaders\output_scaling\fsr1\FSR_EASU_Shader.h" />
+    <ClInclude Include="shaders\output_scaling\OS_Common.h" />
+    <ClInclude Include="shaders\output_scaling\OS_Dx12.h" />
+    <ClInclude Include="shaders\output_scaling\precompile\bcds_bicubic_Shader.h" />
+    <ClInclude Include="shaders\output_scaling\precompile\bcds_catmull_Shader.h" />
+    <ClInclude Include="shaders\output_scaling\precompile\bcds_magc_Shader.h" />
+    <ClInclude Include="shaders\output_scaling\precompile\BCUS_Shader.h" />
+    <ClInclude Include="shaders\rcas\RCAS_Common.h" />
+    <ClInclude Include="shaders\rcas\RCAS_Dx12.h" />
+    <ClInclude Include="State.h" />
+    <ClInclude Include="Util.h" />
+    <ClInclude Include="version_check.h" />
+    <ClInclude Include="NVNGX_Parameter.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="gpu_time\GpuTime_Dx12.cpp" />
+    <ClCompile Include="hooks\D3D12_Hooks.cpp" />
+    <ClCompile Include="hooks\DxgiFactory_Hooks.cpp" />
+    <ClCompile Include="hooks\Dxgi_Hooks.cpp" />
+    <ClCompile Include="hooks\Kernel_Hooks.cpp" />
+    <ClCompile Include="hooks\LibraryLoad_Hooks.cpp" />
+    <ClCompile Include="menu\input\input_system.cpp" />
+    <ClCompile Include="menu\input\input_system_cursor.cpp" />
+    <ClCompile Include="menu\input\input_system_detours.cpp" />
+    <ClCompile Include="menu\input\input_system_directinput.cpp" />
+    <ClCompile Include="menu\input\input_system_gameinput.cpp" />
+    <ClCompile Include="menu\input\input_system_hid.cpp" />
+    <ClCompile Include="menu\input\input_system_messages.cpp" />
+    <ClCompile Include="menu\input\input_system_raw.cpp" />
+    <ClCompile Include="menu\input\input_system_window.cpp" />
+    <ClCompile Include="menu\input\input_system_windows_hooks.cpp" />
+    <ClCompile Include="menu\input\input_system_xinput.cpp" />
+    <ClCompile Include="misc\IdentifyGpu.cpp" />
+    <ClCompile Include="NVNGX_Parameter.cpp" />
+    <ClCompile Include="OptiTypes.cpp" />
+    <ClCompile Include="pch.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='ReleaseDebug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="shaders\magnifier\Magnifier_Common.cpp" />
+    <ClCompile Include="shaders\magnifier\Magnifier_Dx12.cpp" />
+    <ClCompile Include="shaders\rcas\RCAS_Common.cpp" />
+    <ClCompile Include="shaders\Shader_Common.cpp" />
+    <ClCompile Include="shaders\Shader_Dx12.cpp" />
+    <ClCompile Include="hooks\Streamline_Hooks.cpp" />
+    <ClCompile Include="include\imgui\imgui_impl_dx12.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='ReleaseDebug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="include\imgui\imgui_impl_uwp.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='ReleaseDebug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="include\imgui\imgui_impl_win32.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='ReleaseDebug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="include\sl.param\parameters.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='ReleaseDebug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="misc\FrameLimit.cpp" />
+    <ClCompile Include="nvapi\NvApiHooks.cpp" />
+    <ClCompile Include="nvapi\NvApiTypes.cpp" />
+    <ClCompile Include="hooks\Reflex_Hooks.cpp" />
+    <ClCompile Include="resource_tracking\ResTrack_dx12.cpp" />
+    <ClCompile Include="upscalers\dlssd\DLSSDFeature.cpp" />
+    <ClCompile Include="upscalers\dlssd\DLSSDFeature_Dx12.cpp" />
+    <ClCompile Include="upscalers\dlss\DLSSFeature.cpp" />
+    <ClCompile Include="upscalers\dlss\DLSSFeature_Dx12.cpp" />
+    <ClCompile Include="upscalers\FeatureProvider_Dx12.cpp" />
+    <ClCompile Include="Config.cpp" />
+    <ClCompile Include="upscalers\IFeature.cpp" />
+    <ClCompile Include="upscalers\IFeature_Dx12.cpp" />
+    <ClCompile Include="menu\menu_common.cpp" />
+    <ClCompile Include="menu\menu_dx_base.cpp" />
+    <ClCompile Include="menu\menu_dx12.cpp" />
+    <ClCompile Include="menu\menu_overlay_base.cpp" />
+    <ClCompile Include="menu\menu_overlay_dx.cpp" />
+    <ClCompile Include="wrapped\wrapped_swapchain.cpp" />
+    <ClCompile Include="include\imgui\imgui.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='ReleaseDebug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="include\imgui\imgui_draw.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='ReleaseDebug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="include\imgui\imgui_tables.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='ReleaseDebug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="include\imgui\imgui_widgets.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='ReleaseDebug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="include\imgui\misc\freetype\imgui_freetype.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='ReleaseDebug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="Logger.cpp" />
+    <ClCompile Include="inputs\NVNGX.cpp" />
+    <ClCompile Include="shaders\dlssnr\DlssNr_Dx12.cpp" />
+    <ClInclude Include="shaders\dlssnr\DlssNr_ActiveColor.h" />
+    <ClCompile Include="dlssnr\DlssNr_ExposureScan.cpp" />
+    <ClCompile Include="dlssnr\DlssNr_Proxy.cpp" />
+    <ClCompile Include="dlssnr\DlssNr_Menu.cpp" />
+    <ClCompile Include="dlssnr\DlssNrNative.cpp">
+      <PrecompiledHeader>NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="inputs\NVNGX_DLSS_Dx12.cpp" />
+    <ClCompile Include="dllmain.cpp" />
+    <ClCompile Include="scanner\scanner.cpp" />
+    <ClCompile Include="shaders\bias\Bias_Dx12.cpp" />
+    <ClCompile Include="shaders\output_scaling\OS_Dx12.cpp" />
+    <ClCompile Include="shaders\rcas\RCAS_Dx12.cpp" />
+    <ClCompile Include="Util.cpp" />
+    <ClCompile Include="version_check.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="OptiScaler.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Source.def" />
+  </ItemGroup>
+  <!-- laminr: detours.lib and freetype.lib are not committed; fetch and verify the pinned copies (link-libraries.json). -->
+  <Target Name="LaminrFetchLinkLibraries" BeforeTargets="PrepareForBuild" Condition="'$(Platform)'=='x64' And '$(DesignTimeBuild)'!='true'">
+    <Exec Command="powershell -NoProfile -File &quot;$(MSBuildThisFileDirectory)..\..\fetch-link-libraries.ps1&quot;" />
+  </Target>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

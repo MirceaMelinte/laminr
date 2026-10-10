@@ -1,0 +1,1244 @@
+#include "pch.h"
+#include "dllmain.h"
+
+#include "Util.h"
+#include "Config.h"
+#include "Logger.h"
+#include "resource.h"
+#include "DllNames.h"
+
+#include "proxies/Dxgi_Proxy.h"
+#include "proxies/Kernel32_Proxy.h"
+#include "proxies/KernelBase_Proxy.h"
+#include "proxies/Ntdll_Proxy.h"
+
+#include <proxies/NVNGX_Proxy.h>
+
+
+
+#include <hooks/Dxgi_Hooks.h>
+#include <hooks/D3D12_Hooks.h>
+#include <hooks/Ntdll_Hooks.h>
+#include <hooks/Kernel_Hooks.h>
+#include <hooks/Streamline_Hooks.h>
+
+#include <nvapi/NvApiHooks.h>
+
+#include <algorithm>
+#include <cwctype>
+#include <magic_enum.hpp>
+#include <version_check.h>
+#include <misc/IdentifyGpu.h>
+#include <imgui/ImGuiNotify.hpp>
+#include <sha1/sha1.hpp>
+
+static std::vector<HMODULE> _asiHandles;
+static std::vector<std::filesystem::directory_entry> _lateLoadingEntries;
+static bool _passThruMode = false;
+
+typedef const char*(CDECL* PFN_wine_get_version)(void);
+typedef void (*PFN_InitializeASI)(void);
+typedef bool (*PFN_PatchResult)(void);
+
+static inline void* ManualGetProcAddress(HMODULE hModule, const char* functionName)
+{
+    if (!hModule)
+        return nullptr;
+
+    // Verify the alignment
+    auto dosHeader = (IMAGE_DOS_HEADER*) hModule;
+    if (dosHeader->e_magic != IMAGE_DOS_SIGNATURE)
+        return nullptr;
+
+    auto ntHeaders = (IMAGE_NT_HEADERS*) ((BYTE*) hModule + dosHeader->e_lfanew);
+    if (ntHeaders->Signature != IMAGE_NT_SIGNATURE)
+        return nullptr;
+
+    // Look at the export directory
+    IMAGE_DATA_DIRECTORY exportData = ntHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT];
+    if (!exportData.VirtualAddress)
+        return nullptr;
+
+    auto exportDir = (IMAGE_EXPORT_DIRECTORY*) ((BYTE*) hModule + exportData.VirtualAddress);
+
+    DWORD* nameRvas = (DWORD*) ((BYTE*) hModule + exportDir->AddressOfNames);
+    WORD* ordinalTable = (WORD*) ((BYTE*) hModule + exportDir->AddressOfNameOrdinals);
+    DWORD* functionTable = (DWORD*) ((BYTE*) hModule + exportDir->AddressOfFunctions);
+
+    // Iterate over exported names
+    for (DWORD i = 0; i < exportDir->NumberOfNames; ++i)
+    {
+        const char* name = (const char*) hModule + nameRvas[i];
+        if (_stricmp(name, functionName) == 0)
+        {
+            WORD ordinal = ordinalTable[i];
+            DWORD funcRva = functionTable[ordinal];
+            return (BYTE*) hModule + funcRva;
+        }
+    }
+
+    return nullptr; // Not found
+}
+
+static bool IsRunningOnWine()
+{
+    LOG_FUNC();
+
+    HMODULE ntdll = GetModuleHandle(L"ntdll.dll");
+
+    if (!ntdll)
+    {
+        LOG_WARN("Not running on NT!?!");
+        return true;
+    }
+
+    auto pWineGetVersion = (PFN_wine_get_version) KernelBaseProxy::GetProcAddress_()(ntdll, "wine_get_version");
+
+    // Workaround for the ntdll-Hide_Wine_Exports patch
+    if (!pWineGetVersion && KernelBaseProxy::GetProcAddress_()(ntdll, "wine_server_call") != nullptr)
+        pWineGetVersion = (PFN_wine_get_version) ManualGetProcAddress(ntdll, "wine_get_version");
+
+    if (pWineGetVersion)
+    {
+        LOG_INFO("Running on Wine {0}!", pWineGetVersion());
+        return true;
+    }
+
+    LOG_WARN("Wine not detected");
+    return false;
+}
+
+void LoadAsiPlugins()
+{
+    std::filesystem::path pluginPath(Config::Instance()->PluginPath.value_or(L"plugins"));
+    auto folderPath = pluginPath.wstring();
+
+    LOG_DEBUG(L"Checking {} for *.asi", folderPath);
+
+    if (!std::filesystem::exists(pluginPath))
+        return;
+
+    for (const auto& entry : std::filesystem::directory_iterator(folderPath))
+    {
+        if (!entry.is_regular_file())
+            continue;
+
+        std::wstring ext = entry.path().extension().wstring();
+        std::transform(ext.begin(), ext.end(), ext.begin(), [](wchar_t c) { return std::towlower(c); });
+
+        if (ext == L".asi")
+        {
+            std::wstring fileName = entry.path().filename().wstring();
+            std::transform(fileName.begin(), fileName.end(), fileName.begin(),
+                           [](wchar_t c) { return std::towlower(c); });
+
+            HMODULE hMod = nullptr;
+
+            if (fileName.rfind(L"-loadlate") != std::wstring::npos)
+                _lateLoadingEntries.push_back(entry);
+            else
+                hMod = NtdllProxy::LoadLibraryExW_Ldr(entry.path().c_str(), NULL, 0);
+
+            if (hMod != nullptr)
+            {
+                LOG_INFO(L"Loaded: {}", entry.path().wstring());
+                _asiHandles.push_back(hMod);
+
+                auto init = (PFN_InitializeASI) KernelBaseProxy::GetProcAddress_()(hMod, "InitializeASI");
+                auto patchResult = (PFN_PatchResult) KernelBaseProxy::GetProcAddress_()(hMod, "PatchResult");
+
+                if (init != nullptr)
+                    init();
+
+                if (patchResult != nullptr)
+                {
+                    auto pr = patchResult();
+
+                    if (pr)
+                    {
+                        LOG_INFO("Game patching is successful");
+                        State::Instance().isOptiPatcherSucceed = true;
+                    }
+                }
+            }
+            else
+            {
+                DWORD err = GetLastError();
+                LOG_ERROR(L"Failed to load: {}, error {:X}", entry.path().wstring(), err);
+            }
+
+            if (_lateLoadingEntries.size() > 0)
+            {
+                std::thread(
+                    []()
+                    {
+                        try
+                        {
+
+                            auto delay = Config::Instance()->LateAsiPluginsDelay.value_or_default();
+                            LOG_INFO("Waiting {} seconds before loading late-load plugins...", delay);
+                            std::this_thread::sleep_for(std::chrono::seconds(delay));
+
+                            for (const auto& entry : _lateLoadingEntries)
+                            {
+                                HMODULE hMod = NtdllProxy::LoadLibraryExW_Ldr(entry.path().c_str(), NULL, 0);
+
+                                if (hMod != nullptr)
+                                {
+                                    LOG_INFO(L"Loaded late: {}", entry.path().wstring());
+                                    _asiHandles.push_back(hMod);
+
+                                    auto init =
+                                        (PFN_InitializeASI) KernelBaseProxy::GetProcAddress_()(hMod, "InitializeASI");
+
+                                    auto patchResult =
+                                        (PFN_PatchResult) KernelBaseProxy::GetProcAddress_()(hMod, "PatchResult");
+
+                                    if (init != nullptr)
+                                        init();
+
+                                    if (patchResult != nullptr)
+                                    {
+                                        auto pr = patchResult();
+                                        if (pr)
+                                        {
+                                            LOG_INFO("Game patching is successful");
+                                            State::Instance().isOptiPatcherSucceed = true;
+                                        }
+                                    }
+                                }
+                                else
+                                {
+                                    DWORD err = GetLastError();
+                                    LOG_ERROR(L"Failed to load: {}, error {:X}", entry.path().wstring(), err);
+                                }
+                            }
+                        }
+                        catch (...)
+                        {
+                            LOG_ERROR("Exception occurred while loading late-load plugins");
+                        }
+                    })
+                    .detach();
+            }
+        }
+    }
+}
+
+static void CheckWorkingMode()
+{
+    if (!_passThruMode)
+        LOG_FUNC();
+
+    bool modeFound = false;
+    std::string filename = wstring_to_string(Util::DllPath().filename().wstring()); // .string() can crash
+    std::string lCaseFilename(filename);
+    std::filesystem::path pluginPath(Config::Instance()->PluginPath.value_or(L"plugins"));
+
+    for (size_t i = 0; i < lCaseFilename.size(); i++)
+        lCaseFilename[i] = std::tolower(lCaseFilename[i]);
+
+    do
+    {
+        if (!_passThruMode && Config::Instance()->EarlyHooking.value_or_default())
+        {
+            NtdllHooks::Hook();
+            KernelHooks::Hook();
+            KernelHooks::HookBase();
+        }
+
+        // version.dll
+        if (lCaseFilename == "version.dll")
+        {
+            do
+            {
+                auto pluginFilePath = pluginPath / L"version.dll";
+                originalModule = NtdllProxy::LoadLibraryExW_Ldr(pluginFilePath.wstring().c_str(), NULL, 0);
+
+                if (originalModule != nullptr)
+                {
+                    if (!_passThruMode)
+                        LOG_INFO("OptiScaler working as version.dll, original dll loaded from plugin folder");
+
+                    break;
+                }
+
+                originalModule = NtdllProxy::LoadLibraryExW_Ldr(L"version-original.dll", NULL, 0);
+
+                if (originalModule != nullptr)
+                {
+                    if (!_passThruMode)
+                        LOG_INFO("OptiScaler working as version.dll, version-original.dll loaded");
+
+                    break;
+                }
+
+                originalModule = NtdllProxy::LoadLibraryExW_Ldr(L"version.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
+
+                if (originalModule != nullptr && !_passThruMode)
+                    LOG_INFO("OptiScaler working as version.dll, system dll loaded");
+
+            } while (false);
+
+            if (originalModule != nullptr)
+            {
+                dllNames.push_back("version.dll");
+                dllNames.push_back("version");
+                dllNamesW.push_back(L"version.dll");
+                dllNamesW.push_back(L"version");
+
+                shared.LoadOriginalLibrary(originalModule);
+                version.LoadOriginalLibrary(originalModule);
+
+                modeFound = true;
+            }
+            else
+            {
+                if (!_passThruMode)
+                    LOG_ERROR("OptiScaler can't find original version.dll!");
+            }
+
+            break;
+        }
+
+        // winmm.dll
+        if (lCaseFilename == "winmm.dll")
+        {
+            do
+            {
+                auto pluginFilePath = pluginPath / L"winmm.dll";
+                originalModule = NtdllProxy::LoadLibraryExW_Ldr(pluginFilePath.wstring().c_str(), NULL, 0);
+
+                if (originalModule != nullptr)
+                {
+                    if (!_passThruMode)
+                        LOG_INFO("OptiScaler working as winmm.dll, original dll loaded from plugin folder");
+
+                    break;
+                }
+
+                originalModule = NtdllProxy::LoadLibraryExW_Ldr(L"winmm-original.dll", NULL, 0);
+
+                if (originalModule != nullptr)
+                {
+                    if (!_passThruMode)
+                        LOG_INFO("OptiScaler working as winmm.dll, winmm-original.dll loaded");
+
+                    break;
+                }
+
+                originalModule = NtdllProxy::LoadLibraryExW_Ldr(L"winmm.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
+
+                if (originalModule != nullptr && !_passThruMode)
+                    LOG_INFO("OptiScaler working as winmm.dll, system dll loaded");
+
+            } while (false);
+
+            if (originalModule != nullptr)
+            {
+                dllNames.push_back("winmm.dll");
+                dllNames.push_back("winmm");
+                dllNamesW.push_back(L"winmm.dll");
+                dllNamesW.push_back(L"winmm");
+
+                shared.LoadOriginalLibrary(originalModule);
+                winmm.LoadOriginalLibrary(originalModule);
+                modeFound = true;
+            }
+            else
+            {
+                if (!_passThruMode)
+                    LOG_ERROR("OptiScaler can't find original winmm.dll!");
+            }
+
+            break;
+        }
+
+        // wininet.dll
+        if (lCaseFilename == "wininet.dll")
+        {
+            do
+            {
+                auto pluginFilePath = pluginPath / L"wininet.dll";
+                originalModule = NtdllProxy::LoadLibraryExW_Ldr(pluginFilePath.wstring().c_str(), NULL, 0);
+
+                if (originalModule != nullptr)
+                {
+                    if (!_passThruMode)
+                        LOG_INFO("OptiScaler working as wininet.dll, original dll loaded from plugin folder");
+
+                    break;
+                }
+
+                originalModule = NtdllProxy::LoadLibraryExW_Ldr(L"wininet-original.dll", NULL, 0);
+
+                if (originalModule != nullptr)
+                {
+                    if (!_passThruMode)
+                        LOG_INFO("OptiScaler working as wininet.dll, wininet-original.dll loaded");
+
+                    break;
+                }
+
+                originalModule = NtdllProxy::LoadLibraryExW_Ldr(L"wininet.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
+
+                if (originalModule != nullptr && !_passThruMode)
+                    LOG_INFO("OptiScaler working as wininet.dll, system dll loaded");
+
+            } while (false);
+
+            if (originalModule != nullptr)
+            {
+                dllNames.push_back("wininet.dll");
+                dllNames.push_back("wininet");
+                dllNamesW.push_back(L"wininet.dll");
+                dllNamesW.push_back(L"wininet");
+
+                shared.LoadOriginalLibrary(originalModule);
+                wininet.LoadOriginalLibrary(originalModule);
+                modeFound = true;
+            }
+            else
+            {
+                if (!_passThruMode)
+                    LOG_ERROR("OptiScaler can't find original wininet.dll!");
+            }
+
+            break;
+        }
+
+        // dbghelp.dll
+        if (lCaseFilename == "dbghelp.dll")
+        {
+            do
+            {
+                auto pluginFilePath = pluginPath / L"dbghelp.dll";
+                originalModule = NtdllProxy::LoadLibraryExW_Ldr(pluginFilePath.wstring().c_str(), NULL, 0);
+
+                if (originalModule != nullptr)
+                {
+                    if (!_passThruMode)
+                        LOG_INFO("OptiScaler working as dbghelp.dll, original dll loaded from plugin folder");
+
+                    break;
+                }
+
+                originalModule = NtdllProxy::LoadLibraryExW_Ldr(L"dbghelp-original.dll", NULL, 0);
+
+                if (originalModule != nullptr)
+                {
+                    if (!_passThruMode)
+                        LOG_INFO("OptiScaler working as dbghelp.dll, dbghelp-original.dll loaded");
+
+                    break;
+                }
+
+                originalModule = NtdllProxy::LoadLibraryExW_Ldr(L"dbghelp.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
+
+                if (originalModule != nullptr && !_passThruMode)
+                    LOG_INFO("OptiScaler working as dbghelp.dll, system dll loaded");
+
+            } while (false);
+
+            if (originalModule != nullptr)
+            {
+                dllNames.push_back("dbghelp.dll");
+                dllNames.push_back("dbghelp");
+                dllNamesW.push_back(L"dbghelp.dll");
+                dllNamesW.push_back(L"dbghelp");
+
+                shared.LoadOriginalLibrary(originalModule);
+                dbghelp.LoadOriginalLibrary(originalModule);
+                modeFound = true;
+            }
+            else
+            {
+                if (!_passThruMode)
+                    LOG_ERROR("OptiScaler can't find original dbghelp.dll!");
+            }
+
+            break;
+        }
+
+        // optiscaler.dll
+        if (lCaseFilename == "optiscaler.dll")
+        {
+            if (!_passThruMode)
+                LOG_INFO("OptiScaler working as OptiScaler.dll");
+
+            // quick hack for testing
+            originalModule = dllModule;
+
+            dllNames.push_back("optiscaler.dll");
+            dllNames.push_back("optiscaler");
+            dllNamesW.push_back(L"optiscaler.dll");
+            dllNamesW.push_back(L"optiscaler");
+
+            modeFound = true;
+            break;
+        }
+
+        // optiscaler.asi
+        if (lCaseFilename == "optiscaler.asi")
+        {
+            if (!_passThruMode)
+                LOG_INFO("OptiScaler working as OptiScaler.asi");
+
+            // quick hack for testing
+            originalModule = dllModule;
+
+            dllNames.push_back("optiscaler.asi");
+            dllNames.push_back("optiscaler");
+            dllNamesW.push_back(L"optiscaler.asi");
+            dllNamesW.push_back(L"optiscaler");
+
+            modeFound = true;
+            break;
+        }
+
+        // winhttp.dll
+        if (lCaseFilename == "winhttp.dll")
+        {
+            do
+            {
+                auto pluginFilePath = pluginPath / L"winhttp.dll";
+                originalModule = NtdllProxy::LoadLibraryExW_Ldr(pluginFilePath.wstring().c_str(), NULL, 0);
+
+                if (originalModule != nullptr)
+                {
+                    if (!_passThruMode)
+                        LOG_INFO("OptiScaler working as winhttp.dll, original dll loaded from plugin folder");
+
+                    break;
+                }
+
+                originalModule = NtdllProxy::LoadLibraryExW_Ldr(L"winhttp-original.dll", NULL, 0);
+
+                if (originalModule != nullptr)
+                {
+                    if (!_passThruMode)
+                        LOG_INFO("OptiScaler working as winhttp.dll, winhttp-original.dll loaded");
+
+                    break;
+                }
+
+                originalModule = NtdllProxy::LoadLibraryExW_Ldr(L"winhttp.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
+
+                if (originalModule != nullptr && !_passThruMode)
+                    LOG_INFO("OptiScaler working as winhttp.dll, system dll loaded");
+
+            } while (false);
+
+            if (originalModule != nullptr)
+            {
+                dllNames.push_back("winhttp.dll");
+                dllNames.push_back("winhttp");
+                dllNamesW.push_back(L"winhttp.dll");
+                dllNamesW.push_back(L"winhttp");
+
+                shared.LoadOriginalLibrary(originalModule);
+                winhttp.LoadOriginalLibrary(originalModule);
+                modeFound = true;
+            }
+            else
+            {
+                if (!_passThruMode)
+                    LOG_ERROR("OptiScaler can't find original winhttp.dll!");
+            }
+
+            break;
+        }
+
+        // dxgi.dll
+        if (lCaseFilename == "dxgi.dll")
+        {
+            do
+            {
+                auto pluginFilePath = pluginPath / L"dxgi.dll";
+                originalModule = NtdllProxy::LoadLibraryExW_Ldr(pluginFilePath.wstring().c_str(), NULL, 0);
+
+                if (originalModule != nullptr)
+                {
+                    if (!_passThruMode)
+                        LOG_INFO("OptiScaler working as dxgi.dll, original dll loaded from plugin folder");
+
+                    break;
+                }
+
+                originalModule = NtdllProxy::LoadLibraryExW_Ldr(L"dxgi-original.dll", NULL, 0);
+
+                if (originalModule != nullptr)
+                {
+                    if (!_passThruMode)
+                        LOG_INFO("OptiScaler working as dxgi.dll, dxgi-original.dll loaded");
+
+                    break;
+                }
+
+                originalModule = NtdllProxy::LoadLibraryExW_Ldr(L"dxgi.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
+
+                if (originalModule != nullptr && !_passThruMode)
+                    LOG_INFO("OptiScaler working as dxgi.dll, system dll loaded");
+
+            } while (false);
+
+            if (originalModule != nullptr)
+            {
+                dllNames.push_back("dxgi.dll");
+                dllNames.push_back("dxgi");
+                dllNamesW.push_back(L"dxgi.dll");
+                dllNamesW.push_back(L"dxgi");
+
+                DxgiProxy::Init(originalModule);
+                dxgi.LoadOriginalLibrary(originalModule);
+
+                State::Instance().workingMode = WorkingMode::Dxgi;
+                modeFound = true;
+            }
+            else
+            {
+                if (!_passThruMode)
+                    LOG_ERROR("OptiScaler can't find original dxgi.dll!");
+            }
+
+            break;
+        }
+
+        // d3d12.dll
+        if (lCaseFilename == "d3d12.dll")
+        {
+            do
+            {
+                // Moved here to cover agility sdk
+                if (!_passThruMode)
+                {
+                    NtdllHooks::Hook();
+                    KernelHooks::HookBase();
+                }
+
+                auto pluginFilePath = pluginPath / L"d3d12.dll";
+                originalModule = NtdllProxy::LoadLibraryExW_Ldr(pluginFilePath.wstring().c_str(), NULL, 0);
+                if (originalModule != nullptr)
+                {
+                    if (!_passThruMode)
+                        LOG_INFO("OptiScaler working as d3d12.dll, original dll loaded from plugin folder");
+
+                    break;
+                }
+
+                originalModule = NtdllProxy::LoadLibraryExW_Ldr(L"d3d12-original.dll", NULL, 0);
+                if (originalModule != nullptr)
+                {
+                    if (!_passThruMode)
+                        LOG_INFO("OptiScaler working as d3d12.dll, d3d12-original.dll loaded");
+
+                    break;
+                }
+
+                originalModule = NtdllProxy::LoadLibraryExW_Ldr(L"d3d12.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
+
+                if (originalModule != nullptr && !_passThruMode)
+                    LOG_INFO("OptiScaler working as d3d12.dll, system dll loaded");
+
+            } while (false);
+
+            if (originalModule != nullptr)
+            {
+                dllNames.push_back("d3d12.dll");
+                dllNames.push_back("d3d12");
+                dllNamesW.push_back(L"d3d12.dll");
+                dllNamesW.push_back(L"d3d12");
+
+                D3d12Proxy::Init(originalModule);
+                d3d12.LoadOriginalLibrary(originalModule);
+
+                State::Instance().workingMode = WorkingMode::D3d12;
+
+                modeFound = true;
+            }
+            else
+            {
+                if (!_passThruMode)
+                    LOG_ERROR("OptiScaler can't find original d3d12.dll!");
+            }
+
+            break;
+        }
+
+    } while (false);
+
+    // Work as a dummy dll
+    if (_passThruMode)
+        return;
+
+    if (!modeFound)
+    {
+        LOG_ERROR("Unsupported dll name: {0}", filename);
+        return;
+    }
+
+    // DXGI
+    if (DxgiProxy::Module() == nullptr)
+    {
+        LOG_DEBUG("Check for dxgi");
+        HMODULE dxgiModule = nullptr;
+        dxgiModule = GetDllNameWModule(&dxgiNamesW);
+        if (dxgiModule != nullptr)
+        {
+            LOG_DEBUG("dxgi.dll already in memory");
+
+            DxgiProxy::Init(dxgiModule);
+            DxgiHooks::Hook();
+        }
+    }
+    else
+    {
+        LOG_DEBUG("dxgi.dll already in memory");
+        DxgiHooks::Hook();
+    }
+
+    // DirectX 12
+    if (D3d12Proxy::Module() == nullptr)
+    {
+        // Moved here to cover agility sdk
+        KernelHooks::HookBase();
+        NtdllHooks::Hook();
+
+        LOG_DEBUG("Check for d3d12");
+        HMODULE d3d12Module = nullptr;
+        d3d12Module = GetDllNameWModule(&dx12NamesW);
+        if (Config::Instance()->OverlayMenu.value_or_default() && d3d12Module != nullptr)
+        {
+            LOG_DEBUG("d3d12.dll already in memory");
+            D3d12Proxy::Init(d3d12Module);
+            D3D12Hooks::Hook();
+        }
+    }
+    else
+    {
+        LOG_DEBUG("d3d12.dll already in memory");
+        D3D12Hooks::Hook();
+    }
+
+    d3d12AgilityModule = GetDllNameWModule(&dx12agilityNamesW);
+    if (d3d12AgilityModule != nullptr)
+    {
+        LOG_DEBUG("D3D12Core.dll already in memory");
+        D3D12Hooks::HookAgility(d3d12AgilityModule);
+    }
+
+    // NVAPI
+    // Doesn't seem to like GetModuleHandle for some reason, so call our load to make sure
+    if (GetDllNameWModule(&nvapiNamesW) != nullptr)
+    {
+        // This hooks nvapi as well when possible
+        auto nvapi64 = LibraryLoadHooks::LoadNvApi();
+    }
+
+    // hook streamline right away if it's already loaded
+    HMODULE slModule = nullptr;
+    slModule = GetDllNameWModule(&slInterposerNamesW);
+    if (slModule != nullptr)
+    {
+        LOG_DEBUG("sl.interposer.dll already in memory");
+        StreamlineHooks::hookInterposer(slModule);
+        slInterposerModule = slModule;
+    }
+
+    HMODULE slDlssg = nullptr;
+    slDlssg = GetDllNameWModule(&slDlssgNamesW);
+    if (slDlssg != nullptr)
+    {
+        State::Instance().postCodes |= PostCode::SlPluginsAlreadyInMemory;
+        LOG_WARN("sl.dlss_g.dll already in memory");
+        StreamlineHooks::hookDlssg(slDlssg);
+    }
+
+    HMODULE slReflex = nullptr;
+    slReflex = GetDllNameWModule(&slReflexNamesW);
+    if (slReflex != nullptr)
+    {
+        State::Instance().postCodes |= PostCode::SlPluginsAlreadyInMemory;
+        LOG_WARN("sl.reflex.dll already in memory");
+        StreamlineHooks::hookReflex(slReflex);
+    }
+
+    HMODULE slCommon = nullptr;
+    slCommon = GetDllNameWModule(&slCommonNamesW);
+    if (slCommon != nullptr)
+    {
+        State::Instance().postCodes |= PostCode::SlPluginsAlreadyInMemory;
+        LOG_WARN("sl.common.dll already in memory");
+        StreamlineHooks::hookCommon(slCommon);
+    }
+
+    // NVNGX
+    HMODULE nvngxModule = nullptr;
+    nvngxModule = GetDllNameWModule(&nvngxNamesW);
+    if (nvngxModule != nullptr)
+    {
+        LOG_DEBUG("nvngx.dll already in memory");
+        NVNGXProxy::InitNVNGX(nvngxModule);
+    }
+
+    // Hook kernel32 methods
+    if (!Config::Instance()->EarlyHooking.value_or_default())
+    {
+        NtdllHooks::Hook();
+        KernelHooks::Hook();
+    }
+
+    // SpecialK
+    if (skModule == nullptr && Config::Instance()->LoadSpecialK.value_or_default())
+    {
+        auto skFile = Util::ExePath().parent_path() / L"SpecialK64.dll";
+        SetEnvironmentVariableW(L"RESHADE_DISABLE_GRAPHICS_HOOK", L"1");
+
+        State::EnableServeOriginal(200);
+        skModule = NtdllProxy::LoadLibraryExW_Ldr(skFile.c_str(), NULL, 0);
+        State::DisableServeOriginal(200);
+
+        LOG_INFO("Loading SpecialK64.dll, result: {0:X}", (UINT64) skModule);
+    }
+
+    // ReShade
+    if (reshadeModule == nullptr && Config::Instance()->LoadReShade.value_or_default())
+    {
+        auto rsFile = Util::ExePath().parent_path() / L"ReShade64.dll";
+        SetEnvironmentVariableW(L"RESHADE_DISABLE_LOADING_CHECK", L"1");
+
+        if (skModule != nullptr)
+            SetEnvironmentVariableW(L"RESHADE_DISABLE_GRAPHICS_HOOK", L"1");
+
+        State::EnableServeOriginal(201);
+        reshadeModule = NtdllProxy::LoadLibraryExW_Ldr(rsFile.c_str(), NULL, 0);
+        State::DisableServeOriginal(201);
+
+        LOG_INFO("Loading ReShade64.dll, result: {0:X}", (size_t) reshadeModule);
+    }
+
+    // Version check
+    if (Config::Instance()->CheckForUpdate.value_or_default())
+        VersionCheck::Start();
+
+    return;
+}
+
+static void LogGameInfo()
+{
+    Util::GetExeInfo();
+
+    LOG_INFO("Game's Exe: {0}", State::Instance().gameExe);
+    LOG_INFO("Game Name: {0}", State::Instance().gameName);
+    LOG_INFO("Game Version: {0}", State::Instance().gameVersion);
+    LOG_INFO("Game Engine: {0}", magic_enum::enum_name(State::Instance().gameEngine));
+
+#ifndef _DEBUG
+    // Hash is very slow on Debug builds + we don't need to check our own hashes
+    if (Config::Instance()->LogToFile.value_or_default() && Config::Instance()->LogLevel.value_or_default() == 0)
+    {
+        SHA1 checksum;
+        std::ifstream file(Util::ExePath(), std::ios::binary);
+
+        checksum.update(file);
+        const std::string hash = checksum.final();
+
+        LOG_TRACE("Game's Exe SHA1: {}", hash);
+    }
+#endif
+}
+
+void CheckForExcludedProcess()
+{
+    std::wstring exeLower = Util::ExePath().filename().wstring();
+    std::transform(exeLower.begin(), exeLower.end(), exeLower.begin(), ::towlower);
+
+    // If target process is set, only that process is hooked
+    if (Config::Instance()->TargetProcess.has_value())
+    {
+        // Config reads string as lowercase already
+        std::wstring targetProcess = Config::Instance()->TargetProcess.value();
+
+        if (exeLower != targetProcess)
+        {
+            _passThruMode = true;
+            return;
+        }
+    }
+
+    // Config reads string as lowercase already
+    static const std::wstring exclusionList = Config::Instance()->ProcessExclusionList.value_or_default() + L"|";
+
+    static std::vector<std::wstring> exclusions = []()
+    {
+        std::vector<std::wstring> result;
+        size_t start = 0, end;
+
+        while ((end = exclusionList.find(L'|', start)) != std::wstring::npos)
+        {
+            result.emplace_back(exclusionList.substr(start, end - start));
+            start = end + 1;
+        }
+        return result;
+    }();
+
+    for (auto& e : exclusions)
+    {
+        if (exeLower == e)
+        {
+            _passThruMode = true;
+            return;
+        }
+    }
+
+    _passThruMode = false;
+}
+
+void CheckMemoryForProxies() { NVNGXProxy::InitNVNGX(); }
+
+DWORD WINAPI getGpuInfo(LPVOID hModuleVoid)
+{
+    // If DX12 already loaded then grab the full GPU info right away
+    if (hModuleVoid)
+        IdentifyGpu::updateD3d12Capabilities();
+
+    return 0;
+}
+
+BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved)
+{
+    switch (ul_reason_for_call)
+    {
+    case DLL_PROCESS_ATTACH:
+    {
+        DisableThreadLibraryCalls(hModule);
+
+        OSVERSIONINFOW winVer { 0 };
+
+        dllModule = hModule;
+        exeModule = GetModuleHandle(nullptr);
+        processId = GetCurrentProcessId();
+
+        // Main Opti DLL path
+        if (!Config::Instance()->MainDllPath.has_value())
+        {
+            Config::Instance()->MainDllPath.set_volatile_value(L"OptiScaler");
+        }
+
+        if (std::filesystem::path mainDllPath(Config::Instance()->MainDllPath.value()); mainDllPath.is_relative())
+        {
+            Config::Instance()->MainDllPath.set_volatile_value(Util::ExePath().parent_path() / mainDllPath);
+        }
+
+        // If path is invalid or doesn't exist, use the exe folder as main
+        if (!std::filesystem::exists(Config::Instance()->MainDllPath.value()) ||
+            !std::filesystem::is_directory(Config::Instance()->MainDllPath.value()))
+        {
+            Config::Instance()->MainDllPath.set_volatile_value(Util::ExePath().parent_path());
+        }
+
+        // Clean up path
+        Config::Instance()->MainDllPath.set_volatile_value(
+            std::filesystem::absolute(Config::Instance()->MainDllPath.value()));
+
+        // If path is not set or incorrect
+        if (!Config::Instance()->PluginPath.has_value() ||
+            (!std::filesystem::exists(Config::Instance()->PluginPath.value()) ||
+             !std::filesystem::is_directory(Config::Instance()->PluginPath.value())))
+        {
+            Config::Instance()->PluginPath.set_volatile_value(
+                std::filesystem::path(Config::Instance()->MainDllPath.value()) / L"plugins");
+        }
+
+        CheckForExcludedProcess();
+
+        if (_passThruMode)
+        {
+            NtdllProxy::Init();
+            KernelBaseProxy::Init();
+            Kernel32Proxy::Init();
+
+            CheckWorkingMode();
+            return true;
+        }
+
+#ifdef _DEBUG // VER_PRE_RELEASE
+        // Enable file logging for pre builds
+        Config::Instance()->LogToFile.set_volatile_value(true);
+
+        // Set log level to debug
+        if (Config::Instance()->LogLevel.value_or_default() > 1)
+            Config::Instance()->LogLevel.set_volatile_value(1);
+#endif
+
+        PrepareLogger();
+
+        spdlog::warn("{0} loaded", VER_PRODUCT_NAME);
+        spdlog::warn("---------------------------------");
+        spdlog::warn("OptiScaler is freely downloadable from");
+        spdlog::warn("GitHub : https://github.com/optiscaler/OptiScaler/releases");
+        spdlog::warn("Nexus  : https://www.nexusmods.com/site/mods/986");
+        spdlog::warn("If you paid for these files, you've been scammed!");
+        spdlog::warn("DO NOT USE IN MULTIPLAYER GAMES");
+        spdlog::info("");
+        spdlog::info("LogLevel: {}", Config::Instance()->LogLevel.value_or_default());
+
+        spdlog::info("");
+        if (Util::GetRealWindowsVersion(winVer))
+            spdlog::info("Windows version: {} ({}.{}.{})", Util::GetWindowsName(winVer), winVer.dwMajorVersion,
+                         winVer.dwMinorVersion, winVer.dwBuildNumber, winVer.dwPlatformId);
+        else
+            spdlog::warn("Can't read windows version");
+
+        spdlog::info("");
+
+        spdlog::info("Config parameters:");
+        for (const std::string& l : Config::Instance()->GetConfigLog())
+            spdlog::info(l);
+
+        spdlog::info("");
+        spdlog::info("Setting DllPath to {}", wstring_to_string(Config::Instance()->MainDllPath.value()));
+        spdlog::info("");
+
+#ifdef VER_PRE_RELEASE
+        spdlog::info("Pre-release build, disabling update checks");
+        Config::Instance()->CheckForUpdate.set_volatile_value(false);
+#endif
+
+        // Init Kernel proxies
+        NtdllProxy::Init();
+        KernelBaseProxy::Init();
+        Kernel32Proxy::Init();
+
+        // Check for Wine
+        spdlog::info("");
+        State::Instance().isRunningOnLinux = IsRunningOnWine();
+
+        // Not foolproof
+        // calls LoadLibraryExW inside DllMain but seems mostly fine if we only call NvAPI_GetInterfaceVersionString
+        auto isNvidiaViaNvapi = [&]()
+        {
+            bool nvidiaDetected = false;
+
+            // Only try to load the real nvapi which is located in system32
+            auto nvapiModule = NtdllProxy::LoadLibraryExW_Ldr(L"nvapi64.dll", NULL, LOAD_LIBRARY_SEARCH_SYSTEM32);
+
+            // No nvapi, should not be nvidia
+            if (!nvapiModule)
+            {
+                spdlog::debug("Nvidia detected: {}", nvidiaDetected);
+                return nvidiaDetected;
+            }
+
+            if (auto o_NvAPI_QueryInterface =
+                    (PFN_NvApi_QueryInterface) KernelBaseProxy::GetProcAddress_()(nvapiModule, "nvapi_QueryInterface"))
+            {
+                // dxvk-nvapi calls CreateDxgiFactory which we can't do because we are inside DLL_PROCESS_ATTACH
+                NvAPI_ShortString desc;
+                auto* getVersion = GET_INTERFACE(NvAPI_GetInterfaceVersionString, o_NvAPI_QueryInterface);
+                if (getVersion && getVersion(desc) == NVAPI_OK &&
+                    (std::string_view(desc) == std::string_view("NVAPI Open Source Interface (DXVK-NVAPI)") ||
+                     std::string_view(desc) == std::string_view("DXVK_NVAPI")))
+                {
+                    spdlog::debug("Using dxvk-nvapi");
+                    DISPLAY_DEVICEA dd = {};
+                    dd.cb = sizeof(dd);
+                    int deviceIndex = 0;
+
+                    while (EnumDisplayDevicesA(nullptr, deviceIndex, &dd, 0))
+                    {
+                        if (dd.StateFlags & DISPLAY_DEVICE_ACTIVE && std::string_view(dd.DeviceID).contains("VEN_10DE"))
+                        {
+                            // Having any Nvidia GPU active will take precedence
+                            nvidiaDetected = true;
+                        }
+                        deviceIndex++;
+                    }
+                }
+                else if (o_NvAPI_QueryInterface(0x21382138))
+                {
+                    spdlog::error("Using fakenvapi as nvapi64.dll, remove it!");
+                    nvidiaDetected = false;
+                }
+                else
+                {
+                    spdlog::debug("Using Nvidia's nvapi");
+                    auto init = GET_INTERFACE(NvAPI_Initialize, o_NvAPI_QueryInterface);
+                    if (init && init() == NVAPI_OK)
+                    {
+                        nvidiaDetected = true;
+
+                        if (auto unload = GET_INTERFACE(NvAPI_Unload, o_NvAPI_QueryInterface))
+                            unload();
+                    }
+                }
+            }
+
+            NtdllProxy::FreeLibrary_Ldr(nvapiModule);
+
+            spdlog::debug("Nvidia detected: {}", nvidiaDetected);
+
+            return nvidiaDetected;
+        };
+
+        bool possibleNvidia = isNvidiaViaNvapi();
+
+        spdlog::info("");
+        spdlog::info("Check for DLSS files");
+
+        auto exePath = Util::ExePath().remove_filename();
+        auto optiDllPath = std::filesystem::path(Config::Instance()->MainDllPath.value());
+
+        if (Config::Instance()->NVNGX_DLSS_Library.has_value())
+        {
+            std::filesystem::path dlssPath(Config::Instance()->NVNGX_DLSS_Library.value());
+
+            if (std::filesystem::is_directory(dlssPath) && std::filesystem::exists(dlssPath))
+            {
+                State::Instance().NVNGX_DLSS_Path = dlssPath;
+                LOG_DEBUG("nvngx_dlss.dll found at {}", dlssPath.string());
+            }
+        }
+
+        if (!State::Instance().NVNGX_DLSS_Path.has_value())
+            State::Instance().NVNGX_DLSS_Path = Util::FindFilePath(optiDllPath, "nvngx_dlss.dll");
+
+        if (!State::Instance().NVNGX_DLSS_Path.has_value())
+            State::Instance().NVNGX_DLSS_Path = Util::FindFilePath(exePath, "nvngx_dlss.dll");
+
+        State::Instance().NVNGX_DLSSD_Path = Util::FindFilePath(optiDllPath, "nvngx_dlssd.dll");
+        if (!State::Instance().NVNGX_DLSSD_Path.has_value())
+            State::Instance().NVNGX_DLSSD_Path = Util::FindFilePath(exePath, "nvngx_dlssd.dll");
+
+        State::Instance().NVNGX_DLSSG_Path = Util::FindFilePath(optiDllPath, "nvngx_dlssg.dll");
+        if (!State::Instance().NVNGX_DLSSG_Path.has_value())
+            State::Instance().NVNGX_DLSSG_Path = Util::FindFilePath(exePath, "nvngx_dlssg.dll");
+
+        // Not 100% accurate for Nvidia cards without DLSS
+        if (Config::Instance()->DLSSEnabled.value_or_default() && possibleNvidia)
+        {
+            if (State::Instance().NVNGX_DLSS_Path.has_value())
+            {
+                spdlog::info("Enabling DLSS");
+                Config::Instance()->DLSSEnabled.set_volatile_value(true);
+            }
+            else
+            {
+                spdlog::warn("nvngx_dlss.dll not found, disabling DLSS");
+                Config::Instance()->DLSSEnabled.set_volatile_value(false);
+            }
+        }
+        else
+        {
+            Config::Instance()->DLSSEnabled.set_volatile_value(false);
+        }
+
+        spdlog::info("");
+        LogGameInfo();
+
+        // Check for working mode and attach hooks
+        spdlog::info("");
+        CheckWorkingMode();
+        CheckMemoryForProxies();
+
+        if (Config::Instance()->DisableOverlays.value_or_default())
+        {
+            _wputenv_s(L"SteamNoOverlayUIDrawing", L"1");
+            SetEnvironmentVariableW(L"SteamNoOverlayUIDrawing", L"1");
+        }
+
+        // Asi plugins
+        if (Config::Instance()->LoadAsiPlugins.value_or_default())
+        {
+            spdlog::info("");
+            LoadAsiPlugins();
+        }
+
+        for (size_t i = 0; i < 300; i++)
+        {
+            State::Instance().frameTimes.push_back(0.0f);
+            State::Instance().upscaleTimes.push_back(0.0f);
+        }
+
+        spdlog::info("");
+        spdlog::info("Init done");
+        spdlog::info("---------------------------------------------");
+        spdlog::info("");
+
+        CreateThread(nullptr, 0, getGpuInfo, GetDllNameWModule(&dx12NamesW), 0, nullptr);
+
+#ifndef _DEBUG
+        if (Config::Instance()->LogLevel.value_or_default() == 0 && Config::Instance()->LogToFile.value_or_default())
+        {
+            std::thread(
+                []()
+                {
+                    std::this_thread::sleep_for(std::chrono::minutes(10));
+
+                    // If still logging after 10 minutes, send notification
+                    if (Config::Instance()->LogLevel.value_or_default() == 0 &&
+                        Config::Instance()->LogToFile.value_or_default())
+                    {
+                        ImGuiToast notification({ ImGuiToastType::Warning, 30000,
+                                                  "That's likely unintended and will lead to big OptiScaler.log\n"
+                                                  "Please disable logging to file and delete OptiScaler.log" });
+
+                        notification.setTitle("Trace logging still active");
+
+                        ImGui::InsertNotification(notification);
+                    }
+                })
+                .detach();
+        }
+#endif
+
+        break;
+    }
+
+    case DLL_PROCESS_DETACH:
+        State::Instance().isShuttingDown = true;
+
+        // Unhooking and cleaning stuff causing issues during shutdown.
+        // Disabled for now to check if it cause any issues
+        // unhookStreamline();
+        // DetachHooks();
+
+        if (skModule != nullptr)
+            NtdllProxy::FreeLibrary_Ldr(skModule);
+
+        if (reshadeModule != nullptr)
+            NtdllProxy::FreeLibrary_Ldr(reshadeModule);
+
+        if (_asiHandles.size() > 0)
+        {
+            for (size_t i = 0; i < _asiHandles.size(); i++)
+                NtdllProxy::FreeLibrary_Ldr(_asiHandles[i]);
+        }
+
+        for (const PVOID& v : State::Instance().modulesToFree)
+        {
+            NtdllProxy::FreeLibrary_Ldr(v);
+        }
+
+        spdlog::info("");
+        spdlog::info("DLL_PROCESS_DETACH");
+        spdlog::info("Unloading OptiScaler");
+        CloseLogger();
+
+        break;
+
+    case DLL_THREAD_ATTACH:
+        // LOG_DEBUG_ONLY("DLL_THREAD_ATTACH from module: {0:X}, count: {1}", (UINT64)hModule, loadCount);
+        break;
+
+    case DLL_THREAD_DETACH:
+        // LOG_DEBUG_ONLY("DLL_THREAD_DETACH from module: {0:X}, count: {1}", (UINT64)hModule, loadCount);
+        break;
+
+    default:
+        LOG_WARN("Call reason: {0:X}", ul_reason_for_call);
+        break;
+    }
+
+    return TRUE;
+}

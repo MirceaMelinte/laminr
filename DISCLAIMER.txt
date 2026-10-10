@@ -1,0 +1,12 @@
+LAMINR - TEST BUILD DISCLAIMER
+
+laminr is experimental. By installing it, you accept that it may cause crashes, visual problems, reduced performance or other unexpected behaviour. Compatibility and performance are not guaranteed.
+
+
+Back up anything important before testing. Restore and Uninstall are designed to remove the tracked files and restore backups without changing game settings, controls or saves. Restore keeps saved INI presets in the game presets folder. Uninstall asks whether to keep or remove those presets. Presets saved elsewhere are left alone; downloaded effects are removed.
+
+laminr supports only Microsoft Flight Simulator 2024 on NVIDIA RTX 50-series graphics cards. Neural rendering also needs NVIDIA files, which are downloaded during setup if you choose Yes for DLSS 5. Installing a feature does not guarantee it will work in your game. DLSS neural rendering can change how faces and scenery look, and extra passes can reduce performance.
+
+This is a community project using modified ReShade and OptiScaler code. It is not an official release from, or endorsed by, NVIDIA, Microsoft, game developers, ReShade or OptiScaler. Third-party components remain subject to their own licences.
+
+Check logs for personal information before sharing them.

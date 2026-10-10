@@ -1,0 +1,51 @@
+﻿LAMINR FEATURES
+Microsoft Flight Simulator 2024 (Steam or Xbox) | NVIDIA GeForce RTX 50 series | DirectX 12
+
+MANAGER
+- Finds Steam and Xbox copies of the game; Browse covers other folders.
+- Installs only on NVIDIA GeForce RTX 50-series cards; suggests driver 616.92 or newer.
+- Optional DLSS 5 download (Yes / No): NVIDIA DLSS 310.9.1 and Streamline 2.14.1 files plus the RTX 50 neural-rendering model, all hash-checked.
+- Standard and SweetFX effects are bundled for offline install.
+- Install with your own INI; missing FX come from the effect-pack catalogue.
+- Keybinds page for the menu, Preset hotswap and SnapShot keys, with Browse screenshots.
+- Check game and runtime versions, Add NVIDIA runtime and Retry unfinished downloads.
+- Update laminr when a newer manager is run over an existing install.
+
+IN-GAME MENU
+- Insert opens it; Ctrl+Shift+O is the recovery shortcut.
+- Pages: Performance, Neural rendering, Image effects, Settings & status.
+- Menu size 100% to 200%, or Auto.
+- FPS overlay with position, detail, size and opacity.
+- Six overlay colours plus a custom picker; Purple by default.
+
+PERFORMANCE
+- DLSS connection status and Fine-tune DLSS.
+- Frame-rate limit (Reflex where possible) and VRR frame cap calculator.
+- Sharpness and picture size options.
+- Frame generation stays in the simulator's own settings.
+
+NEURAL RENDERING (DLSS 5)
+- Always starts off; tuning is saved.
+- Before or after upscaling, generate before and apply after, or on the finished picture.
+- One to three model passes (five if allowed), each with its own style and strength.
+- Model resolution 25% to 200%, detail and colour strength, skin and scenery controls.
+- Hold frame, side-by-side or wipe comparison, and debug views.
+
+IMAGE EFFECTS AND PRESETS
+- Effect search, switches and settings; Active first.
+- Named saves, overwrite protection, unsaved-change warnings and Revert changes. No automatic saving.
+- Import INI..., Install FX... and Install ZIP... with an in-game file browser.
+- Missing FX for an imported preset downloaded while you fly.
+- Rescan installed FX list and Recompile installed FX.
+- Preset hotswap between Preset 1 and Preset 2.
+
+SNAPSHOT
+- One key or Take screenshot saves to laminr Snapshots; PNG or JPEG.
+
+RECOVERY
+- Installed files are recorded; replaced files are backed up first.
+- Repair, Restore original files and settings reset all keep saved presets.
+- Uninstall covers every recorded installation, with choices for app files, INI files and snapshots.
+
+REQUIREMENTS
+Microsoft Flight Simulator 2024 (Steam or Xbox / Microsoft Store) on 64-bit Windows with an NVIDIA GeForce RTX 50-series card. Neural rendering needs the DLSS 5 download. Presets need their FX files. Extra effects and neural passes cost frame rate.

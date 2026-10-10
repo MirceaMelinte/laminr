@@ -1,0 +1,14 @@
+.DS_Store
+.claude/
+todos/
+
+# Build and packaging outputs (also kept out of the build's source fingerprint)
+/performance-build.log
+/reshade-build.log
+/installer/FusionSetup.exe
+/installer/resource.syso
+/installer/PayloadFusion/
+/test-run/
+/dist/
+# Compiled shader blobs; the code embeds the generated headers next to them
+/optiscaler/OptiScaler/shaders/**/*.cso

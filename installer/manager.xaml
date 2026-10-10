@@ -1,0 +1,176 @@
+﻿<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Title="laminr Manager | Your simulator. Your way." Width="1100" Height="780" MinWidth="1000" MinHeight="740" WindowStartupLocation="CenterScreen" WindowStyle="None" AllowsTransparency="True" Background="Transparent" FontFamily="Segoe UI" Foreground="#F3EFFB">
+ <Window.Resources>
+  <Style TargetType="RadioButton"><Setter Property="Foreground" Value="#EAE1F6"/><Setter Property="Cursor" Value="Hand"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="RadioButton"><Border x:Name="Choice" Background="#282238" BorderBrush="#40314F" BorderThickness="1" CornerRadius="9" Padding="14,12"><ContentPresenter/></Border><ControlTemplate.Triggers><Trigger Property="IsChecked" Value="True"><Setter TargetName="Choice" Property="Background" Value="#54346F"/><Setter TargetName="Choice" Property="BorderBrush" Value="#B68BE8"/></Trigger><Trigger Property="IsEnabled" Value="False"><Setter TargetName="Choice" Property="Opacity" Value="0.4"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
+  <Style TargetType="Button">
+   <Setter Property="Foreground" Value="#F3EFFB"/><Setter Property="Background" Value="#282238"/><Setter Property="Padding" Value="18,12"/><Setter Property="Cursor" Value="Hand"/><Setter Property="FontSize" Value="13"/>
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="Button"><Border x:Name="Surface" Background="{TemplateBinding Background}" CornerRadius="9" Padding="{TemplateBinding Padding}"><ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/></Border><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Surface" Property="Opacity" Value="0.8"/></Trigger><Trigger Property="IsEnabled" Value="False"><Setter TargetName="Surface" Property="Opacity" Value="0.4"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+  </Style>
+  <Style TargetType="CheckBox">
+   <Setter Property="Cursor" Value="Hand"/><Setter Property="Foreground" Value="#EAE1F6"/>
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="CheckBox">
+    <Grid x:Name="CheckSurface" Background="Transparent" MinHeight="28"><Grid.ColumnDefinitions><ColumnDefinition Width="30"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+     <Border x:Name="CheckBorder" Width="20" Height="20" CornerRadius="5" BorderBrush="#8C6DAA" BorderThickness="1.5" Background="#241B30" HorizontalAlignment="Left" VerticalAlignment="Center"><Path x:Name="CheckMark" Data="M 3,8 L 7,12 L 14,4" Stroke="White" StrokeThickness="2" Visibility="Collapsed"/></Border>
+     <ContentPresenter Grid.Column="1" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+    </Grid><ControlTemplate.Triggers>
+     <Trigger Property="IsChecked" Value="True"><Setter TargetName="CheckBorder" Property="Background" Value="#8650C8"/><Setter TargetName="CheckMark" Property="Visibility" Value="Visible"/></Trigger>
+     <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="CheckBorder" Property="BorderBrush" Value="#D4B7F9"/></Trigger>
+     <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="CheckBorder" Property="BorderBrush" Value="White"/><Setter TargetName="CheckBorder" Property="BorderThickness" Value="2"/></Trigger>
+     <Trigger Property="IsEnabled" Value="False"><Setter TargetName="CheckSurface" Property="Opacity" Value="0.45"/></Trigger>
+    </ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+  </Style>
+  <Style x:Key="ImageEffectsToggle" TargetType="CheckBox">
+   <Setter Property="Cursor" Value="Hand"/><Setter Property="Foreground" Value="#EAE1F6"/>
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="CheckBox">
+    <Grid x:Name="ToggleSurface" Background="Transparent" MinHeight="32"><Grid.ColumnDefinitions><ColumnDefinition Width="40"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+     <Border x:Name="ToggleBox" Width="32" Height="32" CornerRadius="7" Background="#21182D" BorderBrush="#C4A0FF" BorderThickness="0" HorizontalAlignment="Left" VerticalAlignment="Center">
+      <Path x:Name="ToggleMark" Data="M 7,16 L 13,22 L 25,10" Stroke="#A44DFF" StrokeThickness="4" StrokeStartLineCap="Square" StrokeEndLineCap="Square" Visibility="Collapsed"/>
+     </Border>
+     <ContentPresenter Grid.Column="1" VerticalAlignment="Center" RecognizesAccessKey="True"/>
+    </Grid><ControlTemplate.Triggers>
+     <Trigger Property="IsChecked" Value="True"><Setter TargetName="ToggleMark" Property="Visibility" Value="Visible"/></Trigger>
+     <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="ToggleBox" Property="Background" Value="#352345"/></Trigger>
+     <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="ToggleBox" Property="BorderThickness" Value="2"/></Trigger>
+     <Trigger Property="IsEnabled" Value="False"><Setter TargetName="ToggleSurface" Property="Opacity" Value="0.45"/></Trigger>
+    </ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+  </Style>
+  <Style x:Key="LaminrSwitch" TargetType="CheckBox">
+   <Setter Property="Cursor" Value="Hand"/><Setter Property="Foreground" Value="#EAE1F6"/>
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="CheckBox">
+    <StackPanel Orientation="Horizontal" Background="Transparent">
+     <Border x:Name="Track" Width="44" Height="24" CornerRadius="12" Background="#342A43" BorderBrush="#69517C" BorderThickness="1" Margin="0,0,12,0">
+      <Ellipse x:Name="Thumb" Width="18" Height="18" Fill="#B9ADC7" HorizontalAlignment="Left" Margin="2,0"/>
+     </Border><ContentPresenter VerticalAlignment="Center" RecognizesAccessKey="True"/>
+    </StackPanel><ControlTemplate.Triggers>
+     <Trigger Property="IsChecked" Value="True"><Setter TargetName="Track" Property="Background" Value="#9148D8"/><Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right"/><Setter TargetName="Thumb" Property="Fill" Value="White"/></Trigger>
+     <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="Track" Property="BorderBrush" Value="#E7D5FF"/></Trigger>
+     <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.45"/></Trigger>
+    </ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter>
+  </Style>
+  <Style TargetType="TextBlock"><Setter Property="TextWrapping" Value="Wrap"/></Style>
+  <Style TargetType="ComboBox">
+   <Setter Property="Foreground" Value="#F3EFFB"/><Setter Property="Background" Value="#282238"/>
+   <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ComboBox">
+    <Grid><ToggleButton Focusable="False" IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+     <ToggleButton.Template><ControlTemplate TargetType="ToggleButton"><Border Background="#282238" CornerRadius="8" Padding="12"><Grid><Path Data="M 0,0 L 5,5 L 10,0" Stroke="#BD9CEC" StrokeThickness="1.5" HorizontalAlignment="Right" VerticalAlignment="Center" Width="10" Height="5"/></Grid></Border></ControlTemplate></ToggleButton.Template>
+    </ToggleButton><ContentPresenter Margin="12,10,30,10" IsHitTestVisible="False" Content="{TemplateBinding SelectionBoxItem}" ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"/>
+    <Popup x:Name="PART_Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True" Focusable="False" PopupAnimation="Fade"><Border Background="#241B30" BorderBrush="#694982" BorderThickness="1" CornerRadius="8" MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"><ScrollViewer MaxHeight="280"><ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/></ScrollViewer></Border></Popup></Grid>
+   </ControlTemplate></Setter.Value></Setter>
+  </Style>
+  <Style TargetType="ComboBoxItem"><Setter Property="Foreground" Value="#F3EFFB"/><Setter Property="Padding" Value="10,8"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ComboBoxItem"><Border x:Name="ItemBorder" Background="Transparent" Padding="{TemplateBinding Padding}"><ContentPresenter/></Border><ControlTemplate.Triggers><Trigger Property="IsHighlighted" Value="True"><Setter TargetName="ItemBorder" Property="Background" Value="#54346F"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Setter.Value></Setter></Style>
+ </Window.Resources>
+ <Border CornerRadius="20" BorderBrush="#40314F" BorderThickness="1" Background="#100E17">
+ <Grid>
+  <Grid.ColumnDefinitions><ColumnDefinition Width="230"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+  <Border CornerRadius="20,0,0,20" Background="#17121F" Padding="24,28">
+   <DockPanel>
+    <StackPanel DockPanel.Dock="Top">
+     <Image x:Name="BrandIcon" Width="68" Height="68" HorizontalAlignment="Center" Margin="0,0,0,8"/>
+     <TextBlock Text="laminr" HorizontalAlignment="Center" FontSize="26" FontWeight="SemiBold"/>
+     <TextBlock Text="NVIDIA RTX 50" TextAlignment="Center" Foreground="#BD9CEC" FontSize="11" Margin="0,6,0,8"/>
+     <Button Padding="18,9" x:Name="HomeNav" Content="Home" Margin="0,0,0,10"/><Button Padding="18,9" x:Name="SetupNav" Content="Setup" Margin="0,0,0,10"/><Button Padding="18,9" x:Name="KeybindsNav" Content="Keybinds" Margin="0,0,0,10"/><Button Padding="18,9" x:Name="SettingsNav" Content="Settings" Margin="0,0,0,10"/><Button Padding="18,9" x:Name="TroubleshootingNav" Content="Troubleshooting"/>
+     <TextBlock Text="Install once.&#10;Make it yours in game." Foreground="#A499B6" Margin="16,8,0,0" FontSize="13"/>
+    </StackPanel>
+    <StackPanel DockPanel.Dock="Bottom" VerticalAlignment="Bottom">
+     <TextBlock Text="laminr" Foreground="#D4B7F9" FontWeight="SemiBold" FontSize="12"/>
+
+     <TextBlock Text="VERSION  /  0.0.1" Foreground="#71657F" FontSize="10" Margin="0,12,0,0"/>
+    </StackPanel>
+    <Grid/>
+   </DockPanel>
+  </Border>
+  <Grid Grid.Column="1" Margin="30,20,26,24">
+   <Grid.RowDefinitions><RowDefinition Height="50"/><RowDefinition Height="*"/><RowDefinition Height="66"/></Grid.RowDefinitions>
+   <Border x:Name="TitleBar" Margin="-30,-20,-26,0" Background="#15101D" CornerRadius="0,20,0,0" Cursor="SizeAll"><Grid><TextBlock Text="LAMINR" Margin="30,12,0,0" Foreground="#91849F" FontSize="11" VerticalAlignment="Center"/><StackPanel Orientation="Horizontal" HorizontalAlignment="Right"><Button x:Name="Minimize" Cursor="Arrow" Background="Transparent" Padding="14,12" ToolTip="Minimize"><Path Data="M 0,5 L 12,5" Stroke="#F3EFFB" StrokeThickness="1.5" Width="12" Height="12"/></Button><Button x:Name="Close" Cursor="Arrow" Background="Transparent" Padding="14,12" ToolTip="Close"><Path Data="M 0,0 L 12,12 M 12,0 L 0,12" Stroke="#F3EFFB" StrokeThickness="1.5" Width="12" Height="12"/></Button></StackPanel></Grid></Border>
+   <Grid Grid.Row="1">
+    <Grid x:Name="HomePage"><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*" MinHeight="50"/></Grid.RowDefinitions><StackPanel>
+     <Border CornerRadius="16" Padding="20,8" Margin="0,0,0,6">
+      <Border.Background><LinearGradientBrush StartPoint="0,0" EndPoint="1,1"><GradientStop Color="#3A2156" Offset="0"/><GradientStop Color="#21172F" Offset="1"/></LinearGradientBrush></Border.Background>
+      <StackPanel><TextBlock Text="laminr" HorizontalAlignment="Center" FontSize="28" FontWeight="SemiBold"/><TextBlock Text="Your simulator. Your way." HorizontalAlignment="Center" Foreground="#C2B0D7" FontSize="13" Margin="0,4,0,0"/>
+       <TextBlock Text="Performance &#x00D7; Image Effects" HorizontalAlignment="Center" Foreground="#D4B7F9" FontWeight="SemiBold" FontSize="12" Margin="0,10,0,2"/>
+</StackPanel>
+     </Border>
+     <Border Background="#1B1624" CornerRadius="10" Padding="12,6" Margin="0,0,0,8"><StackPanel><TextBlock Text="Detected Hardware:" Foreground="#D4B7F9" FontWeight="SemiBold" FontSize="12"/><TextBlock x:Name="Hardware" Text="Checking your hardware..." Foreground="#C9B6DF" FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0"/></StackPanel></Border>
+
+     <Border Background="#1B1624" CornerRadius="13" Padding="14,6"><StackPanel>
+       <TextBlock Text="NVIDIA RTX 50 Status" Foreground="#D4B7F9" FontSize="16" FontWeight="SemiBold" Margin="0,0,0,6"/>
+       <TextBlock Margin="0,0,0,4"><Run Text="Neural Rendering: "/><Run Text="Working" Foreground="#74D99F" FontWeight="SemiBold"/></TextBlock>
+       <TextBlock Margin="0,0,0,4"><Run Text="Image Effects: "/><Run Text="Working" Foreground="#74D99F" FontWeight="SemiBold"/></TextBlock>
+       <TextBlock><Run Text="Performance: "/><Run Text="DLSS" Foreground="#74D99F" FontWeight="SemiBold"/></TextBlock>
+       <TextBlock Text="This build supports NVIDIA RTX 50-series GPUs only. Neural Rendering needs the matching RTX 50 model, which setup downloads and verifies." Foreground="#AA9CB9" FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0"/>
+      </StackPanel></Border>
+     <Grid Margin="0,0,0,4">
+      <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="12"/><ColumnDefinition/></Grid.ColumnDefinitions>
+      <StackPanel><Grid Height="44"><TextBlock x:Name="HomeDetection" Text="Checking for MSFS 2024..." Foreground="#C9B6DF" FontSize="12" TextAlignment="Center" VerticalAlignment="Center"/></Grid>
+       <Button x:Name="OpenLibrary" Tag="MSFS2024" Background="#8650C8" Height="100" Padding="12" ToolTip="Open Microsoft Flight Simulator 2024 setup"><StackPanel Width="174"><TextBlock Text="Microsoft Flight Simulator 2024" TextAlignment="Center" FontWeight="SemiBold" FontSize="14"/><TextBlock x:Name="HomeInstallState" Text="Install laminr" TextAlignment="Center" FontSize="11" Foreground="#E1CEF7" Margin="0,8,0,0"/></StackPanel></Button>
+      </StackPanel>
+     </Grid>
+     </StackPanel>
+    </Grid>
+    <ScrollViewer x:Name="KeybindsPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto"><StackPanel Margin="0,14,8,16"><TextBlock Text="Keybinds" FontSize="28" FontWeight="SemiBold"/><TextBlock x:Name="KeybindsGame" Text="Select your installation on Setup." Foreground="#BD9CEC" Margin="0,12,0,8"/><StackPanel Margin="0,12,0,0">
+<TextBlock Text="For the selected game folder. Close the game before saving; restart the simulator to use the new keys. A shortcut only works after the overlay has loaded. Check your simulator and other overlays for conflicts." TextWrapping="Wrap" Foreground="#AA9CB9"/>
+<TextBlock Text="Primary key" Margin="0,12,0,6"/><WrapPanel><TextBlock x:Name="PrimaryMenuKey" Text="Insert" FontSize="16" MinWidth="120" VerticalAlignment="Center" Margin="0,0,16,0"/><Button x:Name="ChangeMenuKey" Content="Change"/></WrapPanel><TextBlock x:Name="KeyCaptureHint" Text="Click Change, press one key, then Save shortcuts. Escape cancels." Foreground="#AA9CB9" Margin="0,8,0,0"/>
+<WrapPanel Margin="0,16,0,0"><TextBlock Text="Preset hotswap:" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/><TextBlock x:Name="HotSwapKey" Text="Not set" FontSize="16" MinWidth="100" VerticalAlignment="Center"/><Button x:Name="ChangeHotSwapKey" Content="Change"/><Button x:Name="ClearHotSwapKey" Content="Clear"/></WrapPanel><TextBlock Text="Choose Preset 1 and Preset 2 in the in-game Image effects tab." Foreground="#AA9CB9" Margin="0,8,0,0"/>
+<WrapPanel Margin="0,16,0,0"><TextBlock Text="SnapShot:" FontSize="16" VerticalAlignment="Center" Margin="0,0,8,0"/><TextBlock x:Name="SnapshotKey" Text="Not set" FontSize="16" MinWidth="100" VerticalAlignment="Center"/><Button x:Name="ChangeSnapshotKey" Content="Change"/><Button x:Name="ClearSnapshotKey" Content="Clear"/></WrapPanel>
+<TextBlock Text="Snapshots are saved in the game's laminr Snapshots folder." Foreground="#AA9CB9" Margin="0,12,0,6" TextWrapping="Wrap"/><Button x:Name="BrowseSnapshots" Content="Browse screenshots" HorizontalAlignment="Left"/>
+<TextBlock x:Name="BackupMenuHint" Text="Recovery shortcut: Ctrl+Shift+O (no Insert or numpad needed)." Margin="0,12,0,6" Foreground="#AA9CB9"/>
+<WrapPanel Margin="0,12,0,0"><Button x:Name="LoadMenuKeys" Content="Read installed keys" Margin="0,0,8,8"/><Button x:Name="SaveMenuKeys" Content="Save shortcuts" Margin="0,0,8,8"/><Button x:Name="DefaultMenuKeys" Content="Restore default shortcuts" Margin="0,0,8,8"/></WrapPanel>
+</StackPanel></StackPanel></ScrollViewer>
+    <StackPanel x:Name="SettingsPage" Visibility="Collapsed" Margin="0,14,0,0"><TextBlock Text="Settings" FontSize="28" FontWeight="SemiBold"/><TextBlock Text="Remove laminr from all games recorded by this installer." Foreground="#AA9CB9" Margin="0,20,0,12"/><TextBlock Text="Uninstall removes laminr and restores files it backed up. Choose whether to remove app files, saved INI presets and recorded snapshots. Game settings, controls and saves stay untouched. Your original installer EXE is kept." Foreground="#AA9CB9" Margin="0,0,0,20"/><Button x:Name="Uninstall" Content="Uninstall laminr" Background="#30212C" Foreground="#E3B7CC" Margin="0,0,10,10"/></StackPanel>
+    <ScrollViewer x:Name="TroubleshootingPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+     <ScrollViewer.Resources>
+      <Style TargetType="ScrollBar">
+       <Setter Property="Width" Value="12"/><Setter Property="Background" Value="#21192C"/>
+       <Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ScrollBar">
+        <Border Background="{TemplateBinding Background}" CornerRadius="6">
+         <Track x:Name="PART_Track" Orientation="Vertical" IsDirectionReversed="True" Minimum="{TemplateBinding Minimum}" Maximum="{TemplateBinding Maximum}" Value="{Binding Value, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}" ViewportSize="{TemplateBinding ViewportSize}">
+          <Track.DecreaseRepeatButton><RepeatButton Command="ScrollBar.PageUpCommand" Focusable="False"><RepeatButton.Template><ControlTemplate TargetType="RepeatButton"><Border Background="Transparent"/></ControlTemplate></RepeatButton.Template></RepeatButton></Track.DecreaseRepeatButton>
+          <Track.Thumb><Thumb MinHeight="24"><Thumb.Template><ControlTemplate TargetType="Thumb"><Border x:Name="Grip" Background="#694982" CornerRadius="4" Margin="2"/><ControlTemplate.Triggers><Trigger Property="IsMouseOver" Value="True"><Setter TargetName="Grip" Property="Background" Value="#8650C8"/></Trigger><Trigger Property="IsDragging" Value="True"><Setter TargetName="Grip" Property="Background" Value="#B68BE8"/></Trigger></ControlTemplate.Triggers></ControlTemplate></Thumb.Template></Thumb></Track.Thumb>
+          <Track.IncreaseRepeatButton><RepeatButton Command="ScrollBar.PageDownCommand" Focusable="False"><RepeatButton.Template><ControlTemplate TargetType="RepeatButton"><Border Background="Transparent"/></ControlTemplate></RepeatButton.Template></RepeatButton></Track.IncreaseRepeatButton>
+         </Track>
+        </Border>
+       </ControlTemplate></Setter.Value></Setter>
+      </Style>
+     </ScrollViewer.Resources>
+     <StackPanel Margin="0,14,8,16">
+<TextBlock Text="Troubleshooting" FontSize="28" FontWeight="SemiBold"/>
+<TextBlock Text="Applies to the game folder selected on Setup. Close MSFS before making changes. If it has crashed, check Task Manager for a remaining FlightSimulator2024 or FlightSimulator process." TextWrapping="Wrap" Margin="0,16,0,12"/>
+<TextBlock Text="Black screen or missing menu? Reset laminr settings first. If that does not help, repair, then restore the original files." TextWrapping="Wrap" Foreground="#C2B0D7" Margin="0,0,0,16"/>
+<Button x:Name="ResetDownloadCache" Content="Reset manager download cache" Margin="0,0,0,10"/>
+<Button x:Name="ResetDefaults" Content="Back up and reset laminr settings" Margin="0,0,0,10"/>
+<TextBlock Text="Resets Performance settings and selects an empty image-effects look. Keeps saved presets and MSFS settings." TextWrapping="Wrap" Margin="0,0,0,16"/>
+<Button x:Name="RecoveryRepair" Content="Repair laminr files" Margin="0,0,0,10"/>
+<Button x:Name="RecoveryRestore" Content="Remove laminr and restore original files" Margin="0,0,0,10"/>
+<TextBlock Text="Repair uses the files bundled with this installer. Restore uses your verified original backups. If MSFS still fails after restore, verify game files through Steam or Xbox. Keep Installer.log and laminrData/Performance.log when reporting an issue." TextWrapping="Wrap" Foreground="#AA9CB9"/>
+</StackPanel></ScrollViewer>
+<ScrollViewer x:Name="SetupPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto"><StackPanel Margin="0,10,8,16"><DockPanel Margin="0,0,0,20"><StackPanel><TextBlock x:Name="SelectedTitle" Text="Microsoft Flight Simulator 2024" FontSize="26" FontWeight="SemiBold"/><TextBlock Text="Install, play and restore from one place." Foreground="#AA9CB9" Margin="0,6,0,0"/></StackPanel></DockPanel>
+     <TextBlock Text="Your installation" FontSize="16" FontWeight="SemiBold"/>
+     <TextBlock Text="Choose your Steam or Xbox installation." Foreground="#94869F" FontSize="12" Margin="0,5,0,12"/>
+     <ComboBox x:Name="MsfsCopies" Margin="0,0,0,12"><ComboBox.ItemTemplate><DataTemplate><TextBlock Text="{Binding Label}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis"/></DataTemplate></ComboBox.ItemTemplate></ComboBox><Grid><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="12"/><ColumnDefinition Width="100"/></Grid.ColumnDefinitions><Border Background="#201A2B" CornerRadius="9" Padding="12"><TextBox x:Name="GamePath" Background="Transparent" Foreground="#EAE1F6" BorderThickness="0" FontSize="12" VerticalContentAlignment="Center"/></Border><Button x:Name="Browse" Grid.Column="2" Content="Browse"/></Grid>
+
+<TextBlock Text="Image effects" FontSize="16" FontWeight="SemiBold" Margin="0,18,0,10"/>
+<CheckBox x:Name="OwnIniMode" Content="Install with your own INI"/>
+<TextBlock Text="Standard effects are included. Your INI's missing FX are downloaded from the shader catalogue." Foreground="#AA9CB9" FontSize="12" Margin="0,8,0,10"/>
+<WrapPanel x:Name="OwnIniPicker" Visibility="Collapsed"><Button x:Name="ChooseOwnIni" Content="Choose INI..." Margin="0,0,12,8"/><TextBlock x:Name="OwnIniName" Text="No preset selected" VerticalAlignment="Center" MaxWidth="450"/></WrapPanel>
+<Button x:Name="ApplyFxChoice" Content="Install selected INI" HorizontalAlignment="Left" Margin="0,0,0,14" Visibility="Collapsed"/><WrapPanel><Button x:Name="Install" Content="Install laminr" Background="#8650C8" Margin="0,0,10,10"/><Button x:Name="Repair" Content="Repair laminr" Margin="0,0,10,10"/><Button x:Name="Play" Content="Play" Margin="0,0,10,10"/><Button x:Name="Restore" Content="Restore original files" Margin="0,0,10,10"/></WrapPanel>
+
+<Expander Header="Advanced options and downloads" Foreground="#BD9CEC" Margin="0,20,0,12"><StackPanel Margin="0,14,0,0">     <TextBlock Text="Installation method - restore before trying another if the menu does not appear." Foreground="#94869F" FontSize="12" Margin="0,0,0,6"/>
+     <ComboBox x:Name="Method" SelectedIndex="0" Margin="0,0,0,12" Padding="8"><ComboBoxItem Content="Automatic - check game and graphics card" Tag="auto"/><ComboBoxItem Content="Windows multimedia - Xbox (winmm)" Tag="winmm.dll"/><ComboBoxItem Content="DirectX graphics (dxgi)" Tag="dxgi.dll"/><ComboBoxItem Content="DirectX 12 fallback (d3d12)" Tag="d3d12.dll"/><ComboBoxItem Content="Version library fallback (version)" Tag="version.dll"/><ComboBoxItem Content="Debug library fallback (dbghelp)" Tag="dbghelp.dll"/></ComboBox>
+     <Button x:Name="CheckCompatibility" Content="Check game and runtime versions" HorizontalAlignment="Left" Margin="0,0,0,10"/><TextBlock x:Name="Compatibility" Text="Check this game before installing. Automatic setup also checks again at install time." TextWrapping="Wrap" Foreground="#BDA0F4" Margin="0,0,0,14"/><WrapPanel><Button x:Name="Runtime" Content="Add NVIDIA runtime" Margin="0,0,10,10"/><Button x:Name="Retry" Content="Retry unfinished downloads" Margin="0,0,10,10"/></WrapPanel></StackPanel></Expander>     <TextBlock Text="Restore removes laminr. Game settings, saves and saved INI presets are kept." Foreground="#94869F" FontSize="11" Margin="0,4,0,0"/>
+
+    </StackPanel></ScrollViewer>
+   </Grid>
+   <Border Grid.Row="2" BorderBrush="#302438" BorderThickness="0,1,0,0" Padding="0,14,0,0"><StackPanel><TextBlock x:Name="Status" Text="Ready when you are. Shader downloads need an internet connection." Foreground="#C9B6DF" FontSize="12"/><ProgressBar x:Name="InstallProgress" Height="7" Margin="0,12,0,0" Foreground="#9755E9" Background="#332246" BorderThickness="0" Minimum="0" Maximum="100" Visibility="Collapsed"/><TextBlock Text="Neural rendering needs an NVIDIA RTX 50-series GPU and the matching model file, which setup downloads and verifies." Foreground="#84758F" FontSize="10" Margin="0,10,0,0"/></StackPanel></Border>
+  </Grid>
+  <Border x:Name="Intro" Grid.ColumnSpan="2" Background="#171020" CornerRadius="20">
+   <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="620">
+    <TextBlock Text="laminr" FontSize="48" HorizontalAlignment="Center" FontWeight="SemiBold"/>
+    <TextBlock Text="Your simulator. Your way." Foreground="#BD9CEC" FontSize="22" HorizontalAlignment="Center" Margin="0,8,0,36"/>
+    <TextBlock x:Name="IntroStatus" Text="Welcome. Your hardware check starts next." HorizontalAlignment="Center" Foreground="#C9B6DF"/>
+    <ProgressBar x:Name="IntroProgress" Width="360" Height="7" Margin="0,24,0,0" Foreground="#9755E9" Background="#332246" BorderThickness="0" IsIndeterminate="True" Minimum="0" Maximum="100"/>
+
+   </StackPanel>
+  </Border>
+ </Grid>
+ </Border>
+</Window>

@@ -1,0 +1,23 @@
+﻿HOW LAMINR WORKS
+
+laminr is for Microsoft Flight Simulator 2024 on NVIDIA GeForce RTX 50-series cards with DirectX 12.
+
+It combines modified open-source code from ReShade and OptiScaler, including colour-processing code derived from RenoDX, with a manager and an in-game menu. The components keep their authors' credits and licences; the licence texts are in laminrData\Licenses.
+
+The manager copies laminr into the folder that contains FlightSimulator2024.exe and, if you choose Yes for DLSS 5, downloads the NVIDIA files and the model. It records every file it installs and backs up any file it replaces. You can then close it; the menu runs inside the simulator.
+
+WHAT IS INSTALLED
+- The loader (modified OptiScaler): winmm.dll for Xbox, dxgi.dll for Steam.
+- ReShade64.dll (modified ReShade), which draws the image effects.
+- nvngx.dll_dlssnr.dll, the neural-rendering helper, and with DLSS 5 the model nvngx_dlssnr.dll.
+- laminr.ini and ReShade.ini.
+- laminrData: presets, shaders, textures, cache, licences, tools, NVIDIA files and Performance.log.
+
+IMAGE EFFECTS
+FX files provide effects such as colour changes and sharpening. INI presets store which effects you use and their settings. A preset still needs its FX files.
+
+PERFORMANCE AND NEURAL RENDERING
+Upscaling is NVIDIA DLSS, chosen in the simulator's settings; laminr connects to it and adds tuning. Neural rendering runs NVIDIA's model before or after upscaling, or on the finished picture. It always starts off, and installed files alone do not prove it is running. Extra passes cost frame rate.
+
+RESTORE AND UNINSTALL
+Records and backups are kept in %LOCALAPPDATA%\laminr. Restore uses them to remove laminr's files and put the backups back. Game settings, controls and saves are not touched.
