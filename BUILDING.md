@@ -5,7 +5,7 @@
 - Windows x64.
 - Visual Studio 2022 / Build Tools, Desktop development with C++, MSVC v143 and Windows SDK. The included scripts locate the installation with vswhere.
 - Go 1.23 or newer on PATH (release installer built with Go 1.27.1).
-- Python 3 with `jinja2` on PATH for ReShade's GLAD generator (`python -m pip install jinja2`). These are upstream build dependencies.
+- Python 3 with `jinja2` on PATH (`python -m pip install jinja2`), only to regenerate ReShade's committed GLAD sources. See below.
 - Windows PowerShell 5.1 and .NET Framework 4.x.
 
 The engine dependencies are vendored under optiscaler/external and reshade/deps, with their notices. Do not replace these with arbitrary newer versions when reproducing this release. Their upstream .gitmodules files document provenance; this repository contains the files directly, without their tests, samples, documentation and unused prebuilt files. Restore any of those from the pinned upstream revisions if needed.
@@ -24,13 +24,14 @@ The candidate script compiles the engine DLLs, installer host and version resour
 
 `detours.lib` and `freetype.lib` are not committed. `fetch-link-libraries.ps1` downloads them from upstream OptiScaler at the commit pinned in `optiscaler-revision.txt` (`e237f895623742b761f9e5f00067cb3dc62619f4`) and checks them against the SHA-256 hashes in `link-libraries.json`. `build-candidate.ps1`, the OptiScaler project and `build-snapshot-keyboard-test.cmd` run it; a file already in place is only verified. Without network access, download the files by hand and save them at the paths listed in `link-libraries.json`. Do not substitute newer libraries.
 
-One input that upstream checkouts don't include is committed here, although the nested `.gitignore` files match it:
+Two inputs that upstream checkouts don't include are committed here. Negations in `reshade/.gitignore` and `reshade/deps/glad/.gitignore` override the upstream rules that ignore them:
 
 - `reshade/res/version.h` was written by hand as `6.8.0.0`, because the pinned ReShade revision is 18 commits after the `v6.8.0` tag and this repository has no ReShade tags for `tools/update_version.ps1` to read. Release builds increment its last number.
+- `reshade/deps/glad/target/` holds the GLAD loader sources, generated from the vendored specs in `reshade/deps/khronos` by the clean-room build on 10 October 2026. The glad project only generates them when they are missing, and generation installs Python packages and downloads helper headers such as `vk_platform.h` from Khronos's `main` branch, so committing the output keeps the build pinned. A Visual Studio Clean or Rebuild of the glad project deletes or regenerates them; restore them with `git checkout -- reshade/deps/glad/target`. To regenerate on purpose, delete the folder and build with Python on PATH, then review the result before committing it.
 
-Other vendored files matched by those nested ignore rules are also committed. Stage new ones with `git add -f`.
+Other files matched by the vendored libraries' own `.gitignore` rules are not committed: MinHook's standalone project files, glad's tests, the SPIR-V header-generation scripts, OpenXR's jnipp project files, and one development file each from magic_enum and unordered_dense. The build does not use them. To commit a vendored file that one of those rules matches, stage it with `git add -f`.
 
-Generated executables, objects, payload staging and dist are excluded from Git. Go tests run during packaging, after payload generation. An engine build is required before packaging a clean checkout. The release source was prepared from the tested workspace; a complete clean-room engine rebuild from this publication folder has not yet been performed.
+Generated executables, objects, payload staging and dist are excluded from Git. Go tests run during packaging, after payload generation. An engine build is required before packaging a clean checkout. The release source was prepared from the tested workspace. A complete engine build from a fresh clone of this repository succeeded on 10 October 2026.
 
 ## Runtime files
 

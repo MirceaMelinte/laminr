@@ -41,5 +41,7 @@ Thumbs.db
 
 # Versioning and setup files
 /res/[Vv]ersion.h
+# Committed here: this repository has no ReShade tags for update_version.ps1 (see BUILDING.md)
+!/res/[Vv]ersion.h
 /setup/*.ini
 /setup/Properties/AssemblyInfo.cs

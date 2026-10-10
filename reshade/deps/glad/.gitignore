@@ -18,5 +18,7 @@ dist/
 /glad-rs/
 /rust/
 target/
+# Committed here: generation downloads unpinned headers from Khronos (see BUILDING.md)
+!target/
 Cargo.lock
 .vscode/
